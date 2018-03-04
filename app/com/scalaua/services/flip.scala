@@ -136,7 +136,7 @@ sealed trait FlipBehaviour {
 
 object BetsAwaitingBehaviour extends FlipBehaviour {
   override def handleCommand(state: FlipState)(rng: Random, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] =
-ª    ???
+    ???
 
   override def handleEvent(state: FlipState)(props: FlipActorProps): PartialFunction[FlipEvent, FlipState] =
     ???
