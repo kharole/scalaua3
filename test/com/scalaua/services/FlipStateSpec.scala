@@ -16,7 +16,7 @@ class FlipStateSpec extends FlatSpec with Matchers {
 
     simulator = simulator.flip(3).right.get
     simulator.state.bet shouldBe Some(3)
-    simulator.state.status shouldBe "BetsAwaiting"
+    simulator.status shouldBe "BetsAwaiting"
   }
 
 }
