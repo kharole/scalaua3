@@ -90,5 +90,3 @@ case class FlipState(roundId: Long,
                      result: Option[FlipResult] = None) {
 
 }
-
-ª
