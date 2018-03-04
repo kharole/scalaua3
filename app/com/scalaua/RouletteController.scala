@@ -1,7 +1,7 @@
-package controllers
+package com.scalaua
 
 import javax.inject._
-import play.api._
+
 import play.api.mvc._
 
 /**
