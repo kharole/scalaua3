@@ -1,4 +1,4 @@
-package com.scalaua
+package com.scalaua.web
 
 import javax.inject._
 
@@ -9,7 +9,7 @@ import play.api.mvc._
  * application's home page.
  */
 @Singleton
-class RouletteController @Inject()(cc: ControllerComponents) extends AbstractController(cc) {
+class FlipController @Inject()(cc: ControllerComponents) extends AbstractController(cc) {
 
   /**
    * Create an Action to render an HTML page.

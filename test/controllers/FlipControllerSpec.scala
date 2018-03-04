@@ -1,6 +1,6 @@
 package controllers
 
-import com.scalaua.RouletteController
+import com.scalaua.web.FlipController
 import org.scalatestplus.play._
 import org.scalatestplus.play.guice._
 import play.api.test._
@@ -12,12 +12,12 @@ import play.api.test.Helpers._
  *
  * For more information, see https://www.playframework.com/documentation/latest/ScalaTestingWithScalaTest
  */
-class RouletteControllerSpec extends PlaySpec with GuiceOneAppPerTest with Injecting {
+class FlipControllerSpec extends PlaySpec with GuiceOneAppPerTest with Injecting {
 
   "HomeController GET" should {
 
     "render the index page from a new instance of controller" in {
-      val controller = new RouletteController(stubControllerComponents())
+      val controller = new FlipController(stubControllerComponents())
       val home = controller.index().apply(FakeRequest(GET, "/"))
 
       status(home) mustBe OK
@@ -26,7 +26,7 @@ class RouletteControllerSpec extends PlaySpec with GuiceOneAppPerTest with Injec
     }
 
     "render the index page from the application" in {
-      val controller = inject[RouletteController]
+      val controller = inject[FlipController]
       val home = controller.index().apply(FakeRequest(GET, "/"))
 
       status(home) mustBe OK
