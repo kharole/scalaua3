@@ -7,7 +7,13 @@ lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
 scalaVersion := "2.12.3"
 
+libraryDependencies += ws
+libraryDependencies += filters
 libraryDependencies += guice
+libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.5.11" withSources() withJavadoc()
+libraryDependencies += "com.typesafe.akka" %% "akka-persistence" % "2.5.11" withSources() withJavadoc()
+libraryDependencies += "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.83" withSources() withJavadoc()
+
 libraryDependencies += "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % Test
 
 // Adds additional packages into Twirl

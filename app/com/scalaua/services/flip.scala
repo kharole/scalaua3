@@ -2,17 +2,20 @@ package com.scalaua.services
 
 import java.time.Instant
 
-import scala.util.Right
+import scala.util.{Random, Right}
 
 
 object Rng {
-  def fixed(value: Int): Rng = new Rng {
-    override def next(max: Int): Int = value
+  def fixed(value: Int): Rng = (n: Int) => value
+
+  def real: Rng = new Rng {
+    val r = Random
+    override def next(n: Int): Int = r.nextInt(n)
   }
 }
 
 trait Rng {
-  def next(max: Int): Int
+  def next(n: Int): Int
 }
 
 //model
@@ -92,7 +95,7 @@ case class BetAttemptFailed(reason: WalletFailure5xx, timestamp: Instant) extend
 
 case class WinConfirmed(confirmation: WalletConfirmation, timestamp: Instant) extends FlipEvent with ConfirmationEvent
 
-case class WinRefused(reason: WalletError4xx, timestamp: Instant) extends FlipEvent with FlipWalletError
+case class WinError(reason: WalletError4xx, timestamp: Instant) extends FlipEvent with FlipWalletError
 
 case class WinAttemptFailed(reason: WalletFailure5xx, timestamp: Instant) extends FlipEvent with FlipAttemptFailed
 
