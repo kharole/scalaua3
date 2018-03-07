@@ -6,6 +6,14 @@ import scala.util.{Right}
 
 case class FlipPlayerSimulator(session: String, state: FlipState, props: FlipActorProps) {
 
+  def startNewRound()(implicit rng: Rng, ts: Instant): Either[FlipError, FlipPlayerSimulator] = {
+    val command = StartNewRound
+    state.handleCommand(session, rng, props, ts)(command) match {
+      case Right(event) => Right(copy(state = state.handleEvent(props)(event)))
+      case Left(error) => Left(error)
+    }
+  }
+
   def flipCoin(bet: Int, alternative: CoinSide)(implicit rng: Rng, ts: Instant): Either[FlipError, FlipPlayerSimulator] = {
     val command = FlipCoin(bet, alternative)
     state.handleCommand(session, rng, props, ts)(command) match {
