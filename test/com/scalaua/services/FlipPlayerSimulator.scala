@@ -4,11 +4,11 @@ import java.time.Instant
 
 import scala.util.{Random, Right}
 
-case class FlipPlayerSimulator(playerId: String, session: String, state: FlipState, props: FlipActorProps) {
+case class FlipPlayerSimulator(session: String, state: FlipState, props: FlipActorProps) {
 
-  def flip(bet: Int)(implicit rng: Random, ts: Instant): Either[FlipError, FlipPlayerSimulator] = {
-    val command = Flip(session, bet)
-    state.handleCommand(rng, props, ts)(command) match {
+  def flipCoin(bet: Int)(implicit rng: Random, ts: Instant): Either[FlipError, FlipPlayerSimulator] = {
+    val command = FlipCoin(bet)
+    state.handleCommand(session, rng, props, ts)(command) match {
       case Right(event) => Right(copy(state = state.handleEvent(props)(event)))
       case Left(error) => Left(error)
     }
@@ -18,7 +18,7 @@ case class FlipPlayerSimulator(playerId: String, session: String, state: FlipSta
     case Some(pendingRequest) =>
       val pr = pendingRequest.walletRequest
       val command = WalletConfirmation(pr.id, pr.amount, 0, ts)
-      val event = state.handleCommand(rng, props, ts)(command).right.get
+      val event = state.handleCommand(session, rng, props, ts)(command).right.get
       copy(state = state.handleEvent(props)(event))
     case None =>
       this

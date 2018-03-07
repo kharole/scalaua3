@@ -9,14 +9,15 @@ import scala.util.Random
 class FlipStateSpec extends FlatSpec with Matchers {
 
   "flip" should "payout win" in {
-    implicit val rng = new Random()
-    implicit val ts = Instant.now()
+    implicit val rng: Random = new Random()
+    implicit val ts: Instant = Instant.now()
 
-    var simulator = FlipPlayerSimulator("playerA", "AAA", FlipState(0, BetsAwaiting), FlipActorProps())
+    var simulator = FlipPlayerSimulator("AAA", FlipState.initial, FlipActorProps("playerA"))
 
-    simulator = simulator.flip(3).right.get
-    simulator.state.bet shouldBe Some(3)
     simulator.status shouldBe "BetsAwaiting"
+    simulator = simulator.flipCoin(3).right.get
+    simulator.state.bet shouldBe Some(3)
+    simulator.status shouldBe "CollectingBets"
   }
 
 }
