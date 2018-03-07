@@ -2,11 +2,11 @@ package com.scalaua.services
 
 import java.time.Instant
 
-import scala.util.{Random, Right}
+import scala.util.{Right}
 
 case class FlipPlayerSimulator(session: String, state: FlipState, props: FlipActorProps) {
 
-  def flipCoin(bet: Int, alternative: CoinSide)(implicit rng: Random, ts: Instant): Either[FlipError, FlipPlayerSimulator] = {
+  def flipCoin(bet: Int, alternative: CoinSide)(implicit rng: Rng, ts: Instant): Either[FlipError, FlipPlayerSimulator] = {
     val command = FlipCoin(bet, alternative)
     state.handleCommand(session, rng, props, ts)(command) match {
       case Right(event) => Right(copy(state = state.handleEvent(props)(event)))
@@ -14,7 +14,7 @@ case class FlipPlayerSimulator(session: String, state: FlipState, props: FlipAct
     }
   }
 
-  def confirm(implicit rng: Random, ts: Instant): FlipPlayerSimulator = state.pendingRequest match {
+  def confirm(implicit rng: Rng, ts: Instant): FlipPlayerSimulator = state.pendingRequest match {
     case Some(pendingRequest) =>
       val pr = pendingRequest.walletRequest
       val command = WalletConfirmation(pr.id, pr.amount, 0, ts)
@@ -28,5 +28,6 @@ case class FlipPlayerSimulator(session: String, state: FlipState, props: FlipAct
     case BetsAwaiting => "BetsAwaiting"
     case CollectingBets(_) => "CollectingBets"
     case PayingOut(_) => "PayingOut"
+    case RoundFinished => "RoundFinished"
   }
 }

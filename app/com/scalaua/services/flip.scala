@@ -2,7 +2,18 @@ package com.scalaua.services
 
 import java.time.Instant
 
-import scala.util.Random
+import scala.util.Right
+
+
+object Rng {
+  def fixed(value: Int): Rng = new Rng {
+    override def next(max: Int): Int = value
+  }
+}
+
+trait Rng {
+  def next(max: Int): Int
+}
 
 //model
 
@@ -71,7 +82,7 @@ trait ConfirmationEvent {
 
 case class BetsAccepted(session: String, amount: Int, alternative: CoinSide, timestamp: Instant) extends FlipEvent
 
-case class BetsConfirmed(confirmation: WalletConfirmation, outcome: CoinSide, timestamp: Instant) extends FlipEvent with ConfirmationEvent
+case class BetsConfirmed(confirmation: WalletConfirmation, result: CoinSide, timestamp: Instant) extends FlipEvent with ConfirmationEvent
 
 case class BetError(reason: WalletError4xx, timestamp: Instant) extends FlipEvent with FlipWalletError
 
@@ -116,6 +127,14 @@ case class FlipState(roundId: Int,
                      status: FlipStatus,
                      bet: Option[FlipBet] = None,
                      result: Option[FlipResult] = None) {
+  def verify(wc: WalletConfirmation): WalletConfirmation = {
+    pendingRequest match {
+      case Some(p) if p.walletRequest.id == wc.id =>
+        wc
+      case _ =>
+        throw new IllegalStateException("Request and response doesn't match")
+    }
+  }
 
   def pendingRequest: Option[PendingRequest] = status match {
     case BetsAwaiting => None
@@ -132,7 +151,13 @@ case class FlipState(roundId: Int,
     copy(status = CollectingBets(p))
   }
 
-  def handleCommand(implicit session: String, rng: Random, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] =
+  def gotoPayingOut(r: CoinSide, ts: Instant)(implicit props: FlipActorProps): FlipState = {
+    val win = if (r == bet.get.alternative) bet.get.amount * 2 else 0
+    val p = PendingRequest(WalletRequest(s"${props.playerId}.$roundId", "WIN", win, ts))
+    copy(status = PayingOut(p), result = Some(FlipResult(r, win)))
+  }
+
+  def handleCommand(implicit session: String, rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] =
     status match {
       case BetsAwaiting => BetsAwaitingBehaviour.handleCommand(this)
       case CollectingBets(_) => CollectingBetsBehaviour.handleCommand(this)
@@ -152,13 +177,13 @@ case class FlipState(roundId: Int,
 
 //behaviour
 sealed trait FlipBehaviour {
-  def handleCommand(state: FlipState)(implicit session: String, rng: Random, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]]
+  def handleCommand(state: FlipState)(implicit session: String, rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]]
 
   def handleEvent(state: FlipState)(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState]
 }
 
 object BetsAwaitingBehaviour extends FlipBehaviour {
-  override def handleCommand(state: FlipState)(implicit session: String, rng: Random, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = {
+  override def handleCommand(state: FlipState)(implicit session: String, rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = {
     case FlipCoin(bet, alternative) =>
       if (bet > 0 && bet <= 5) {
         Right(BetsAccepted(session, bet, alternative, ts))
@@ -176,8 +201,11 @@ object BetsAwaitingBehaviour extends FlipBehaviour {
 }
 
 object CollectingBetsBehaviour extends FlipBehaviour {
-  override def handleCommand(state: FlipState)(implicit session: String, rng: Random, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = {
-    case WalletConfirmation(id, amount, newBalance, processedAt) => ???
+  override def handleCommand(state: FlipState)(implicit session: String, rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = {
+    case wc: WalletConfirmation =>
+      val confirmation = state.verify(wc)
+      val result = if (rng.next(1) == 0) FlipHead else FlipTail
+      Right(BetsConfirmed(confirmation, result, ts))
 
     case WalletError4xx(code) => ???
 
@@ -185,18 +213,20 @@ object CollectingBetsBehaviour extends FlipBehaviour {
   }
 
   override def handleEvent(state: FlipState)(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = {
-    ???
+    case BetsConfirmed(_, result, ts) =>
+      state
+        .gotoPayingOut(result, ts)
   }
 }
 
 object PayingOutBehaviour extends FlipBehaviour {
-  override def handleCommand(state: FlipState)(implicit session: String, rng: Random, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = ???
+  override def handleCommand(state: FlipState)(implicit session: String, rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = ???
 
   override def handleEvent(state: FlipState)(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = ???
 }
 
 object RoundFinishedBehaviour extends FlipBehaviour {
-  override def handleCommand(state: FlipState)(implicit session: String, rng: Random, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = ???
+  override def handleCommand(state: FlipState)(implicit session: String, rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = ???
 
   override def handleEvent(state: FlipState)(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = ???
 }

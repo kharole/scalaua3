@@ -4,12 +4,10 @@ import java.time.Instant
 
 import org.scalatest.{FlatSpec, Matchers}
 
-import scala.util.Random
-
 class FlipStateSpec extends FlatSpec with Matchers {
 
   "flip" should "payout win" in {
-    implicit val rng: Random = new Random()
+    implicit val rng: Rng = Rng.fixed(0)
     implicit val ts: Instant = Instant.now()
 
     var simulator = FlipPlayerSimulator("AAA", FlipState.initial, FlipActorProps("playerA"))
@@ -21,7 +19,7 @@ class FlipStateSpec extends FlatSpec with Matchers {
 
     simulator = simulator.confirm
     simulator.status shouldBe "PayingOut"
-    simulator.state.result shouldBe Some(FlipResult(FlipHead, 6))
+    simulator.state.result shouldBe Some(FlipResult(FlipHead, 6))ª
   }
 
 }
