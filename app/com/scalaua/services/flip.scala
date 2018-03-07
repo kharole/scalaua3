@@ -40,7 +40,7 @@ case class Attach(session: String) extends FlipCommand
 
 case class Detach() extends FlipCommand
 
-case class FlipCoin(bet: Int) extends FlipCommand
+case class FlipCoin(bet: Int, alternative: CoinSide) extends FlipCommand
 
 //events
 trait Event {
@@ -69,9 +69,9 @@ trait ConfirmationEvent {
   val confirmation: WalletConfirmation
 }
 
-case class BetsAccepted(session: String, bet: Int, timestamp: Instant) extends FlipEvent
+case class BetsAccepted(session: String, amount: Int, alternative: CoinSide, timestamp: Instant) extends FlipEvent
 
-case class BetsConfirmed(confirmation: WalletConfirmation, outcome: FlipOutcome, timestamp: Instant) extends FlipEvent with ConfirmationEvent
+case class BetsConfirmed(confirmation: WalletConfirmation, outcome: CoinSide, timestamp: Instant) extends FlipEvent with ConfirmationEvent
 
 case class BetError(reason: WalletError4xx, timestamp: Instant) extends FlipEvent with FlipWalletError
 
@@ -96,13 +96,13 @@ case class PayingOut(pendingRequest: PendingRequest) extends FlipStatus
 
 case object RoundFinished extends FlipStatus
 
-sealed trait FlipOutcome
+sealed trait CoinSide
 
-case object FlipHead extends FlipOutcome
+case object FlipHead extends CoinSide
 
-case object FlipTail extends FlipOutcome
+case object FlipTail extends CoinSide
 
-case class FlipResult(outcome: FlipOutcome, win: Int)
+case class FlipResult(outcome: CoinSide, win: Int)
 
 case class FlipActorProps(playerId: String)
 
@@ -110,9 +110,11 @@ object FlipState {
   def initial = FlipState(0, BetsAwaiting)
 }
 
+case class FlipBet(amount: Int, alternative: CoinSide)
+
 case class FlipState(roundId: Int,
                      status: FlipStatus,
-                     bet: Option[Int] = None,
+                     bet: Option[FlipBet] = None,
                      result: Option[FlipResult] = None) {
 
   def pendingRequest: Option[PendingRequest] = status match {
@@ -122,11 +124,11 @@ case class FlipState(roundId: Int,
     case RoundFinished => None
   }
 
-  def place(newBet: Int): FlipState =
-    copy(bet = Some(newBet))
+  def placeBet(amount: Int, alternative: CoinSide): FlipState =
+    copy(bet = Some(FlipBet(amount, alternative)))
 
   def gotoCollectingBets(session: String, ts: Instant)(implicit props: FlipActorProps): FlipState = {
-    val p = PendingRequest(WalletRequest(s"${props.playerId}.$roundId", "BET", bet.get, ts))
+    val p = PendingRequest(WalletRequest(s"${props.playerId}.$roundId", "BET", bet.get.amount, ts))
     copy(status = CollectingBets(p))
   }
 
@@ -157,25 +159,29 @@ sealed trait FlipBehaviour {
 
 object BetsAwaitingBehaviour extends FlipBehaviour {
   override def handleCommand(state: FlipState)(implicit session: String, rng: Random, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = {
-    case FlipCoin(bet) =>
+    case FlipCoin(bet, alternative) =>
       if (bet > 0 && bet <= 5) {
-        Right(BetsAccepted(session, bet, ts))
+        Right(BetsAccepted(session, bet, alternative, ts))
       } else {
         Left(FlipError("error.invalid.bet"))
       }
   }
 
   override def handleEvent(state: FlipState)(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = {
-    case BetsAccepted(session, bet, ts) =>
+    case BetsAccepted(session, amount, alternative, ts) =>
       state
-        .place(bet)
+        .placeBet(amount, alternative)
         .gotoCollectingBets(session, ts)
   }
 }
 
 object CollectingBetsBehaviour extends FlipBehaviour {
   override def handleCommand(state: FlipState)(implicit session: String, rng: Random, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = {
-    ???
+    case WalletConfirmation(id, amount, newBalance, processedAt) => ???
+
+    case WalletError4xx(code) => ???
+
+    case WalletFailure5xx(code) => ???
   }
 
   override def handleEvent(state: FlipState)(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = {
