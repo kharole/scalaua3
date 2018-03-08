@@ -24,6 +24,7 @@
     <appender-ref ref="STDOUT" />
   </appender>
 
+  <logger name="com.scalaua" level="DEBUG" />
   <logger name="play" level="INFO" />
   <logger name="application" level="DEBUG" />
 

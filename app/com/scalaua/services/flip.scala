@@ -2,6 +2,8 @@ package com.scalaua.services
 
 import java.time.Instant
 
+import play.api.libs.json._
+
 import scala.util.{Random, Right}
 
 
@@ -10,6 +12,7 @@ object Rng {
 
   def real: Rng = new Rng {
     val r = Random
+
     override def next(n: Int): Int = r.nextInt(n)
   }
 }
@@ -36,6 +39,12 @@ case class PendingRequest(walletRequest: WalletRequest, nrOfAttempts: Int = 0, u
 
 case class WalletRequest(id: String, requestType: String, amount: Int, ts: Instant)
 
+case class FlipError(code: String)
+
+//commands
+
+sealed trait FlipCommand
+
 sealed trait WalletResponse extends FlipCommand
 
 case class WalletConfirmation(id: String, amount: Int, newBalance: Int, processedAt: Instant) extends WalletResponse
@@ -44,19 +53,17 @@ case class WalletError4xx(code: String) extends WalletResponse
 
 case class WalletFailure5xx(code: String) extends WalletResponse
 
-case class FlipError(code: String)
+sealed trait WsInbound extends FlipCommand {
+  val name: String
+}
 
-//commands
+case class Attach(session: String, name: String = "attach") extends WsInbound
 
-sealed trait FlipCommand
+case class Detach(name: String = "detach") extends WsInbound
 
-case class Attach(session: String) extends FlipCommand
+case class FlipCoin(bet: Int, alternative: CoinSide, name: String = "flip-coin") extends WsInbound
 
-case class Detach() extends FlipCommand
-
-case class FlipCoin(bet: Int, alternative: CoinSide) extends FlipCommand
-
-case object StartNewRound extends FlipCommand
+case class StartNewRound(name: String = "start-new-round") extends WsInbound
 
 //events
 trait Event {
@@ -101,6 +108,76 @@ case class WinAttemptFailed(reason: WalletFailure5xx, timestamp: Instant) extend
 
 case class NewRoundStarted(timestamp: Instant) extends FlipEvent
 
+case class Attached(timestamp: Instant) extends FlipEvent
+
+case class Detached(timestamp: Instant) extends FlipEvent
+
+case class WsOutbound(name: String = "outbound")
+
+//json
+
+object FlipHead {
+  implicit val format: OFormat[FlipHead] = Json.format[FlipHead]
+}
+
+object FlipTail {
+  implicit val format: OFormat[FlipTail] = Json.format[FlipTail]
+}
+
+object CoinSide {
+  val w: OWrites[CoinSide] = {
+    case h: FlipHead => FlipHead.format.writes(h)
+    case t: FlipTail => FlipTail.format.writes(t)
+  }
+  val r: Reads[CoinSide] = (json: JsValue) => {
+    (json \ "side").as[String] match {
+      case "head" => FlipHead.format.reads(json)
+      case "tail" => FlipTail.format.reads(json)
+    }
+  }
+
+  implicit val format: OFormat[CoinSide] = OFormat(r, w)
+}
+
+object WsOutbound {
+  implicit val format: OFormat[WsOutbound] = Json.format[WsOutbound]
+}
+
+object Attach {
+  implicit val format: OFormat[Attach] = Json.format[Attach]
+}
+
+object Detach {
+  implicit val format: OFormat[Detach] = Json.format[Detach]
+}
+
+object FlipCoin {
+  implicit val format: OFormat[FlipCoin] = Json.format[FlipCoin]
+}
+
+object StartNewRound {
+  implicit val format: OFormat[StartNewRound] = Json.format[StartNewRound]
+}
+
+object WsInbound {
+  val w: OWrites[WsInbound] = {
+    case c: Attach => Attach.format.writes(c)
+    case c: Detach => Detach.format.writes(c)
+    case c: FlipCoin => FlipCoin.format.writes(c)
+    case c: StartNewRound => StartNewRound.format.writes(c)
+  }
+  val r: Reads[WsInbound] = (json: JsValue) => {
+    (json \ "name").as[String] match {
+      case "attach" => Attach.format.reads(json)
+      case "detach" => Detach.format.reads(json)
+      case "flip-coin" => FlipCoin.format.reads(json)
+      case "start-new-round" => StartNewRound.format.reads(json)
+    }
+  }
+  implicit val format: OFormat[WsInbound] = OFormat(r, w)
+}
+
+
 //state
 sealed trait FlipStatus
 
@@ -114,9 +191,9 @@ case object RoundFinished extends FlipStatus
 
 sealed trait CoinSide
 
-case object FlipHead extends CoinSide
+case class FlipHead(side: String = "head") extends CoinSide
 
-case object FlipTail extends CoinSide
+case class FlipTail(side: String = "tail") extends CoinSide
 
 case class FlipResult(outcome: CoinSide, win: Int)
 
@@ -193,7 +270,7 @@ sealed trait FlipBehaviour {
 
 object BetsAwaitingBehaviour extends FlipBehaviour {
   override def handleCommand(state: FlipState)(implicit session: String, rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = {
-    case FlipCoin(bet, alternative) =>
+    case FlipCoin(bet, alternative, _) =>
       if (bet > 0 && bet <= 5) {
         Right(BetsAccepted(session, bet, alternative, ts))
       } else {
@@ -213,7 +290,7 @@ object CollectingBetsBehaviour extends FlipBehaviour {
   override def handleCommand(state: FlipState)(implicit session: String, rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = {
     case wc: WalletConfirmation =>
       val confirmation = state.verify(wc)
-      val result = if (rng.next(1) == 0) FlipHead else FlipTail
+      val result = if (rng.next(1) == 0) FlipHead() else FlipTail()
       Right(BetsConfirmed(confirmation, result, ts))
 
     case WalletError4xx(code) => ???
@@ -248,7 +325,7 @@ object PayingOutBehaviour extends FlipBehaviour {
 
 object RoundFinishedBehaviour extends FlipBehaviour {
   override def handleCommand(state: FlipState)(implicit session: String, rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = {
-    case StartNewRound =>
+    case StartNewRound(_) =>
       Right(NewRoundStarted(ts))
   }
 
