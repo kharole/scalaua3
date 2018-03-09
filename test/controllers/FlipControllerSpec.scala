@@ -47,10 +47,10 @@ class FlipControllerSpec extends PlaySpec with ScalaFutures {
           val rs0 = Json.parse(queue.take()).as[WsOutbound]
           rs0.name mustBe "attached"
 
-/*          await().until(conditionNonEmpty)
-          val rs1 = Json.parse(queue.take()).as[List[WsOutbound]]
-          rs1 mustBe List(BalanceUpdated(0))
-
+          await().until(conditionNonEmpty)
+          val rs1 = Json.parse(queue.take()).as[WsOutbound]
+          rs1 mustBe BalanceUpdated(0)
+/*
           webSocket.sendMessage(Json.toJson(FlipCoin(100, "head")).toString())
 
           await().until(conditionNonEmpty)

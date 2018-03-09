@@ -37,6 +37,8 @@ case class PendingRequest(walletRequest: WalletRequest, nrOfAttempts: Int = 0, u
   private def pow2to(n: Int): Long = 1L << n
 }
 
+case class WalletBalanceRequest()
+
 case class WalletRequest(id: String, requestType: String, amount: Int, ts: Instant)
 
 case class FlipError(code: String)
@@ -46,6 +48,8 @@ case class FlipError(code: String)
 sealed trait FlipCommand
 
 sealed trait WalletResponse extends FlipCommand
+
+case class BalanceResponse(balance: Int)
 
 case class WalletConfirmation(id: String, amount: Int, newBalance: Int, processedAt: Instant) extends WalletResponse
 
@@ -108,19 +112,17 @@ case class WinAttemptFailed(reason: WalletFailure5xx, timestamp: Instant) extend
 
 case class NewRoundStarted(timestamp: Instant) extends FlipEvent
 
-case class Attached(timestamp: Instant) extends FlipEvent
+case class Attached(timestamp: Instant, name: String = "attached") extends FlipEvent with WsOutbound
 
 case class Detached(timestamp: Instant) extends FlipEvent
 
-case class WsOutbound(name: String)
+sealed trait WsOutbound {
+  val name: String
+}
 
-case class BalanceUpdated(value: Int, name: String = "balance-updated")
+case class BalanceUpdated(value: Int, name: String = "balance-updated") extends WsOutbound
 
 //json
-
-object WsOutbound {
-  implicit val format: OFormat[WsOutbound] = Json.format[WsOutbound]
-}
 
 object Attach {
   implicit val format: OFormat[Attach] = Json.format[Attach]
@@ -156,6 +158,28 @@ object WsInbound {
   implicit val format: OFormat[WsInbound] = OFormat(r, w)
 }
 
+object Attached {
+  implicit val format: OFormat[Attached] = Json.format[Attached]
+}
+
+object BalanceUpdated {
+  implicit val format: OFormat[BalanceUpdated] = Json.format[BalanceUpdated]
+}
+
+object WsOutbound {
+  val w: OWrites[WsOutbound] = {
+    case c: Attached => Attached.format.writes(c)
+    case c: BalanceUpdated => BalanceUpdated.format.writes(c)
+
+  }
+  val r: Reads[WsOutbound] = (json: JsValue) => {
+    (json \ "name").as[String] match {
+      case "attached" => Attached.format.reads(json)
+      case "balance-updated" => BalanceUpdated.format.reads(json)
+    }
+  }
+  implicit val format: OFormat[WsOutbound] = OFormat(r, w)
+}
 
 //state
 sealed trait FlipStatus

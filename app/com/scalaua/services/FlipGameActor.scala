@@ -44,23 +44,11 @@ class FlipGameActor @Inject()(@Named("merchant-actor") walletRef: ActorRef)
     case Attach(session, _) =>
       client = Some(ClientSession(sender(), session))
       client.get.ref ! Attached(Instant.now())
+      walletRef ! WalletBalanceRequest()
       log.info("attached")
 
-    /*    case Connect(gp@GameParams(_, sessionKey, _, channel, _), wsConnectionActor) =>
-          wsConnectionActor ! Connected(self, gameCtx, gp, state.client.asInitImpacts)
-          gameClient = Some(wsConnectionActor)
-
-          val request = BalanceRequest(
-            gctx.player.currency,
-            sessionKey,
-            validateSessionKey = true,
-            gctx.player.playerId,
-            state.walletSource(channel)(gctx)
-          )
-          walletClient ! request
-
-        case WalletResponseEnvelope(Right(r: BalanceResponse), _) =>
-          gameClient.get ! ClientImpacts(List(UpdateBalance(r.balance)))*/
+    case BalanceResponse(balance) =>
+      client.get.ref ! BalanceUpdated(balance)
 
     case cmd: FlipCommand if state.handleCommand(client.get.session, rng, props, Instant.now()).isDefinedAt(cmd) =>
       log.debug(s"Processing $cmd command in state: $state")
