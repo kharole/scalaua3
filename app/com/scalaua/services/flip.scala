@@ -116,27 +116,12 @@ case class WsOutbound(name: String = "outbound")
 
 //json
 
-object FlipHead {
-  implicit val format: OFormat[FlipHead] = Json.format[FlipHead]
-}
-
-object FlipTail {
-  implicit val format: OFormat[FlipTail] = Json.format[FlipTail]
-}
-
 object CoinSide {
-  val w: OWrites[CoinSide] = {
-    case h: FlipHead => FlipHead.format.writes(h)
-    case t: FlipTail => FlipTail.format.writes(t)
-  }
-  val r: Reads[CoinSide] = (json: JsValue) => {
-    (json \ "side").as[String] match {
-      case "head" => FlipHead.format.reads(json)
-      case "tail" => FlipTail.format.reads(json)
-    }
-  }
+  def head = CoinSide("head")
 
-  implicit val format: OFormat[CoinSide] = OFormat(r, w)
+  def tail = CoinSide("tail")
+
+  implicit val format: OFormat[CoinSide] = Json.format[CoinSide]
 }
 
 object WsOutbound {
@@ -189,11 +174,7 @@ case class PayingOut(pendingRequest: PendingRequest) extends FlipStatus
 
 case object RoundFinished extends FlipStatus
 
-sealed trait CoinSide
-
-case class FlipHead(side: String = "head") extends CoinSide
-
-case class FlipTail(side: String = "tail") extends CoinSide
+case class CoinSide(value: String)
 
 case class FlipResult(outcome: CoinSide, win: Int)
 
@@ -271,10 +252,12 @@ sealed trait FlipBehaviour {
 object BetsAwaitingBehaviour extends FlipBehaviour {
   override def handleCommand(state: FlipState)(implicit session: String, rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = {
     case FlipCoin(bet, alternative, _) =>
-      if (bet > 0 && bet <= 5) {
-        Right(BetsAccepted(session, bet, alternative, ts))
+      if (bet <= 0 || bet > 5) {
+        Left(FlipError("error.invalid.bet.value"))
+      } else if (alternative.value != "head" && alternative.value != "tail") {
+        Left(FlipError("error.invalid.bet.alternative"))
       } else {
-        Left(FlipError("error.invalid.bet"))
+        Right(BetsAccepted(session, bet, alternative, ts))
       }
   }
 
@@ -290,7 +273,7 @@ object CollectingBetsBehaviour extends FlipBehaviour {
   override def handleCommand(state: FlipState)(implicit session: String, rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = {
     case wc: WalletConfirmation =>
       val confirmation = state.verify(wc)
-      val result = if (rng.next(1) == 0) FlipHead() else FlipTail()
+      val result = if (rng.next(1) == 0) CoinSide.head else CoinSide.tail
       Right(BetsConfirmed(confirmation, result, ts))
 
     case WalletError4xx(code) => ???

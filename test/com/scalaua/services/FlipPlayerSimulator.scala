@@ -2,7 +2,7 @@ package com.scalaua.services
 
 import java.time.Instant
 
-import scala.util.{Right}
+import scala.util.Right
 
 case class FlipPlayerSimulator(session: String, state: FlipState, props: FlipActorProps) {
 

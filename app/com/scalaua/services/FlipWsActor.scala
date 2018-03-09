@@ -16,7 +16,7 @@ class FlipWsActor(out: ActorRef, managerRef: ActorRef) extends Actor with ActorL
     log.info("ws disconnected")
   }
 
-  def receive = detached
+  def receive: Receive = detached
 
   def detached: Receive = {
     case a: Attach =>
