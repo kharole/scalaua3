@@ -34,7 +34,7 @@ class FlipController @Inject()(cc: ControllerComponents,
   implicit val outFormat = WsOutbound.format
   implicit val messageFlowTransformer = MessageFlowTransformer.jsonMessageFlowTransformer[WsInbound, List[WsOutbound]]
 
-  def api: WebSocket = WebSocket.accept[WsInbound, List[WsOutbound]] { rq =>
+  def ws: WebSocket = WebSocket.accept[WsInbound, List[WsOutbound]] { rq =>
     ActorFlow.actorRef(out => FlipWsActor.props(out, pma))
   }
 

@@ -5,14 +5,15 @@ import java.time.Instant
 import akka.actor.{ActorLogging, ActorRef}
 import akka.persistence.{PersistentActor, RecoveryCompleted}
 
-class FlipActor() extends PersistentActor with ActorLogging {
+case class ClientSession(ref: ActorRef, session: String)
+
+class FlipGameActor() extends PersistentActor with ActorLogging {
 
   val props = FlipActorProps("playerA")
 
   private val rng: Rng = Rng.real
 
-  var clientRef: Option[ActorRef] = None
-  var session: Option[String] = None
+  var client: Option[ClientSession] = None
   var state: FlipState = FlipState.initial
 
   def sendPending(state: FlipState) = ???
@@ -22,10 +23,14 @@ class FlipActor() extends PersistentActor with ActorLogging {
       updateState(evt)
     case RecoveryCompleted =>
       //sendPending(state)
-      log.info(s"Flip actor ${persistenceId} have completed recovery")
+      log.info(s"Flip actor $persistenceId have completed recovery")
   }
 
   override def receiveCommand: Receive = {
+    case Attach(session, _) =>
+      client = Some(ClientSession(sender(), session))
+      client.get.ref ! Attached(Instant.now())
+
     /*    case Connect(gp@GameParams(_, sessionKey, _, channel, _), wsConnectionActor) =>
           wsConnectionActor ! Connected(self, gameCtx, gp, state.client.asInitImpacts)
           gameClient = Some(wsConnectionActor)
@@ -42,11 +47,11 @@ class FlipActor() extends PersistentActor with ActorLogging {
         case WalletResponseEnvelope(Right(r: BalanceResponse), _) =>
           gameClient.get ! ClientImpacts(List(UpdateBalance(r.balance)))*/
 
-    case cmd: FlipCommand if state.handleCommand(session.get, rng, props, Instant.now()).isDefinedAt(cmd) =>
+    case cmd: FlipCommand if state.handleCommand(client.get.session, rng, props, Instant.now()).isDefinedAt(cmd) =>
       log.debug(s"Processing $cmd command in state: $state")
-      state.handleCommand(session.get, rng, props, Instant.now())(cmd) match {
+      state.handleCommand(client.get.session, rng, props, Instant.now())(cmd) match {
         case error@Left(_) =>
-          clientRef.get ! error
+          client.get.ref ! error
         case Right(evt) =>
           persistEvent(evt)
       }

@@ -112,7 +112,7 @@ case class Attached(timestamp: Instant) extends FlipEvent
 
 case class Detached(timestamp: Instant) extends FlipEvent
 
-case class WsOutbound(name: String = "outbound")
+case class WsOutbound(name: String)
 
 //json
 

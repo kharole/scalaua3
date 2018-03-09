@@ -23,7 +23,7 @@ class FlipWsActor(out: ActorRef, managerRef: ActorRef) extends Actor with ActorL
       managerRef ! a
     case a: Attached =>
       context.become(attached(sender()))
-      out ! a
+      out ! List(WsOutbound("attached"))
   }
 
   def attached(gameRef: ActorRef): Receive = {
@@ -33,8 +33,8 @@ class FlipWsActor(out: ActorRef, managerRef: ActorRef) extends Actor with ActorL
     case wso: WsOutbound =>
       out ! wso
 
-    case unknown@_ =>
-      log.error(s"unknown object $unknown in web socket")
+    case uo@_ =>
+      log.error(s"unknown object $uo in web socket")
 
   }
 
