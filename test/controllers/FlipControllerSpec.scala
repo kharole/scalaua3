@@ -1,46 +1,65 @@
 package controllers
 
-import com.scalaua.web.FlipController
+import java.util.concurrent.{ArrayBlockingQueue, Callable}
+import java.util.function.Consumer
+
+import org.awaitility.Awaitility._
+import com.scalaua.services.{Attach, BalanceUpdated, FlipCoin, WsOutbound}
+import org.scalatest.concurrent.PatienceConfiguration.Timeout
+import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.play._
-import org.scalatestplus.play.guice._
+import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.libs.json.Json
 import play.api.test._
-import play.api.test.Helpers._
+import play.shaded.ahc.org.asynchttpclient.AsyncHttpClient
 
-/**
- * Add your spec here.
- * You can mock out a whole application including requests, plugins etc.
- *
- * For more information, see https://www.playframework.com/documentation/latest/ScalaTestingWithScalaTest
- */
-class FlipControllerSpec extends PlaySpec with GuiceOneAppPerTest with Injecting {
+import scala.compat.java8.FutureConverters
+import scala.concurrent.duration._
 
-  /*"HomeController GET" should {
+class FlipControllerSpec extends PlaySpec with ScalaFutures {
 
-    "render the index page from a new instance of controller" in {
-      val controller = new FlipController(stubControllerComponents())
-      val home = controller.index().apply(FakeRequest(GET, "/"))
+  "FlipController" should {
+    "attach and flip" in WsTestClient.withClient { client =>
+      lazy val port: Int = Helpers.testServerPort
+      val app = new GuiceApplicationBuilder().build()
+      Helpers.running(TestServer(port, app)) {
+        val myPublicAddress = s"localhost:$port"
+        val serverURL = s"ws://$myPublicAddress/ws"
 
-      status(home) mustBe OK
-      contentType(home) mustBe Some("text/html")
-      contentAsString(home) must include ("Welcome to Play")
+        val asyncHttpClient: AsyncHttpClient = client.underlying[AsyncHttpClient]
+        val webSocketClient = new WebSocketClient(asyncHttpClient)
+        val queue = new ArrayBlockingQueue[String](10)
+        val origin = serverURL
+        val consumer: Consumer[String] = (message: String) => queue.put(message)
+        val listener = new WebSocketClient.LoggingListener(consumer)
+        val completionStage = webSocketClient.call(serverURL, origin, listener)
+        val f = FutureConverters.toScala(completionStage)
+
+        // Test we can get good output from the websocket
+        whenReady(f, timeout = Timeout(1.second)) { webSocket =>
+          val conditionOpen: Callable[java.lang.Boolean] = () => webSocket.isOpen
+          val conditionNonEmpty: Callable[java.lang.Boolean] = () => queue.peek() != null
+
+          await().until(conditionOpen)
+          webSocket.sendMessage(Json.toJson(Attach("AAA")).toString())
+
+          await().until(conditionNonEmpty)
+          val rs0 = Json.parse(queue.take()).as[List[WsOutbound]]
+          rs0.map(_.name) mustBe List("attached")
+
+/*          await().until(conditionNonEmpty)
+          val rs1 = Json.parse(queue.take()).as[List[WsOutbound]]
+          rs1 mustBe List(BalanceUpdated(0))
+
+          webSocket.sendMessage(Json.toJson(FlipCoin(100, "head")).toString())
+
+          await().until(conditionNonEmpty)
+          val rs2 = Json.parse(queue.take()).as[List[WsOutbound]]
+          rs2.map(_.name) mustBe List("bet-accepted")*/
+        }
+
+      }
+
     }
-
-    "render the index page from the application" in {
-      val controller = inject[FlipController]
-      val home = controller.index().apply(FakeRequest(GET, "/"))
-
-      status(home) mustBe OK
-      contentType(home) mustBe Some("text/html")
-      contentAsString(home) must include ("Welcome to Play")
-    }
-
-    "render the index page from the router" in {
-      val request = FakeRequest(GET, "/")
-      val home = route(app, request).get
-
-      status(home) mustBe OK
-      contentType(home) mustBe Some("text/html")
-      contentAsString(home) must include ("Welcome to Play")
-    }
-  }*/
+  }
 }

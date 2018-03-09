@@ -61,7 +61,7 @@ case class Attach(session: String, name: String = "attach") extends WsInbound
 
 case class Detach(name: String = "detach") extends WsInbound
 
-case class FlipCoin(bet: Int, alternative: CoinSide, name: String = "flip-coin") extends WsInbound
+case class FlipCoin(bet: Int, alternative: String, name: String = "flip-coin") extends WsInbound
 
 case class StartNewRound(name: String = "start-new-round") extends WsInbound
 
@@ -92,9 +92,9 @@ trait ConfirmationEvent {
   val confirmation: WalletConfirmation
 }
 
-case class BetsAccepted(session: String, amount: Int, alternative: CoinSide, timestamp: Instant) extends FlipEvent
+case class BetsAccepted(session: String, amount: Int, alternative: String, timestamp: Instant) extends FlipEvent
 
-case class BetsConfirmed(confirmation: WalletConfirmation, result: CoinSide, timestamp: Instant) extends FlipEvent with ConfirmationEvent
+case class BetsConfirmed(confirmation: WalletConfirmation, result: String, timestamp: Instant) extends FlipEvent with ConfirmationEvent
 
 case class BetError(reason: WalletError4xx, timestamp: Instant) extends FlipEvent with FlipWalletError
 
@@ -114,15 +114,9 @@ case class Detached(timestamp: Instant) extends FlipEvent
 
 case class WsOutbound(name: String)
 
+case class BalanceUpdated(value: Int, name: String = "balance-updated")
+
 //json
-
-object CoinSide {
-  def head = CoinSide("head")
-
-  def tail = CoinSide("tail")
-
-  implicit val format: OFormat[CoinSide] = Json.format[CoinSide]
-}
 
 object WsOutbound {
   implicit val format: OFormat[WsOutbound] = Json.format[WsOutbound]
@@ -174,9 +168,7 @@ case class PayingOut(pendingRequest: PendingRequest) extends FlipStatus
 
 case object RoundFinished extends FlipStatus
 
-case class CoinSide(value: String)
-
-case class FlipResult(outcome: CoinSide, win: Int)
+case class FlipResult(outcome: String, win: Int)
 
 case class FlipActorProps(playerId: String)
 
@@ -184,7 +176,7 @@ object FlipState {
   def initial = FlipState(0, BetsAwaiting)
 }
 
-case class FlipBet(amount: Int, alternative: CoinSide)
+case class FlipBet(amount: Int, alternative: String)
 
 case class FlipState(roundId: Int,
                      status: FlipStatus,
@@ -206,7 +198,7 @@ case class FlipState(roundId: Int,
     case RoundFinished => None
   }
 
-  def placeBet(amount: Int, alternative: CoinSide): FlipState =
+  def placeBet(amount: Int, alternative: String): FlipState =
     copy(bet = Some(FlipBet(amount, alternative)))
 
   def gotoCollectingBets(session: String, ts: Instant)(implicit props: FlipActorProps): FlipState = {
@@ -214,7 +206,7 @@ case class FlipState(roundId: Int,
     copy(status = CollectingBets(p))
   }
 
-  def gotoPayingOut(r: CoinSide, ts: Instant)(implicit props: FlipActorProps): FlipState = {
+  def gotoPayingOut(r: String, ts: Instant)(implicit props: FlipActorProps): FlipState = {
     val win = if (r == bet.get.alternative) bet.get.amount * 2 else 0
     val p = PendingRequest(WalletRequest(s"${props.playerId}.$roundId.WIN", "WIN", win, ts))
     copy(status = PayingOut(p), result = Some(FlipResult(r, win)))
@@ -254,7 +246,7 @@ object BetsAwaitingBehaviour extends FlipBehaviour {
     case FlipCoin(bet, alternative, _) =>
       if (bet <= 0 || bet > 5) {
         Left(FlipError("error.invalid.bet.value"))
-      } else if (alternative.value != "head" && alternative.value != "tail") {
+      } else if (alternative != "head" && alternative != "tail") {
         Left(FlipError("error.invalid.bet.alternative"))
       } else {
         Right(BetsAccepted(session, bet, alternative, ts))
@@ -273,7 +265,7 @@ object CollectingBetsBehaviour extends FlipBehaviour {
   override def handleCommand(state: FlipState)(implicit session: String, rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = {
     case wc: WalletConfirmation =>
       val confirmation = state.verify(wc)
-      val result = if (rng.next(1) == 0) CoinSide.head else CoinSide.tail
+      val result = if (rng.next(1) == 0) "head" else "tail"
       Right(BetsConfirmed(confirmation, result, ts))
 
     case WalletError4xx(code) => ???

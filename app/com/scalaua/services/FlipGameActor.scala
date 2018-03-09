@@ -1,13 +1,17 @@
 package com.scalaua.services
 
 import java.time.Instant
+import javax.inject.Inject
 
 import akka.actor.{ActorLogging, ActorRef}
 import akka.persistence.{PersistentActor, RecoveryCompleted}
+import com.google.inject.name.Named
+import scala.concurrent.duration._
 
 case class ClientSession(ref: ActorRef, session: String)
 
-class FlipGameActor() extends PersistentActor with ActorLogging {
+class FlipGameActor @Inject()(@Named("merchant-actor") walletRef: ActorRef)
+  extends PersistentActor with ActorLogging {
 
   val props = FlipActorProps("playerA")
 
@@ -16,7 +20,17 @@ class FlipGameActor() extends PersistentActor with ActorLogging {
   var client: Option[ClientSession] = None
   var state: FlipState = FlipState.initial
 
-  def sendPending(state: FlipState) = ???
+  def sendPending(pendingRequest: Option[PendingRequest]): Unit = {
+    implicit val ec = context.dispatcher
+
+    pendingRequest match {
+      case Some(p) if !p.undelivered && p.nrOfAttempts < 10 =>
+        context.system.scheduler.scheduleOnce(30 seconds, () => walletRef ! p.walletRequest)
+        ()
+      case _ =>
+        ()
+    }
+  }
 
   override def receiveRecover: Receive = {
     case evt: FlipEvent =>
@@ -30,6 +44,7 @@ class FlipGameActor() extends PersistentActor with ActorLogging {
     case Attach(session, _) =>
       client = Some(ClientSession(sender(), session))
       client.get.ref ! Attached(Instant.now())
+      log.info("attached")
 
     /*    case Connect(gp@GameParams(_, sessionKey, _, channel, _), wsConnectionActor) =>
           wsConnectionActor ! Connected(self, gameCtx, gp, state.client.asInitImpacts)
@@ -80,7 +95,7 @@ class FlipGameActor() extends PersistentActor with ActorLogging {
     if (recoveryFinished) {
       //if (newState.client.impacts.nonEmpty)
       //gameClient.get ! ClientImpacts(newState.client.impacts.reverse)
-      sendPending(newState)
+      sendPending(newState.pendingRequest)
       /*
                 sendPromotionProgress(event)
                 memorizeGameClient(event)

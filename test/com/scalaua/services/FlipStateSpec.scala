@@ -13,13 +13,13 @@ class FlipStateSpec extends FlatSpec with Matchers {
     var simulator = FlipPlayerSimulator("AAA", FlipState.initial, FlipActorProps("playerA"))
 
     simulator.status shouldBe "BetsAwaiting"
-    simulator = simulator.flipCoin(3, CoinSide.head).right.get
-    simulator.state.bet shouldBe Some(FlipBet(3, CoinSide.head))
+    simulator = simulator.flipCoin(3, "head").right.get
+    simulator.state.bet shouldBe Some(FlipBet(3, "head"))
     simulator.status shouldBe "CollectingBets"
 
     simulator = simulator.confirm
     simulator.status shouldBe "PayingOut"
-    simulator.state.result shouldBe Some(FlipResult(CoinSide.head, 6))
+    simulator.state.result shouldBe Some(FlipResult("head", 6))
 
     simulator = simulator.confirm
     simulator.status shouldBe "RoundFinished"
