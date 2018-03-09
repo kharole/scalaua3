@@ -23,7 +23,7 @@ class FlipWsActor(out: ActorRef, managerRef: ActorRef) extends Actor with ActorL
       managerRef ! a
     case a: Attached =>
       context.become(attached(sender()))
-      out ! List(WsOutbound("attached"))
+      out ! WsOutbound("attached")
   }
 
   def attached(gameRef: ActorRef): Receive = {

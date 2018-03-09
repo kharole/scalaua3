@@ -44,8 +44,8 @@ class FlipControllerSpec extends PlaySpec with ScalaFutures {
           webSocket.sendMessage(Json.toJson(Attach("AAA")).toString())
 
           await().until(conditionNonEmpty)
-          val rs0 = Json.parse(queue.take()).as[List[WsOutbound]]
-          rs0.map(_.name) mustBe List("attached")
+          val rs0 = Json.parse(queue.take()).as[WsOutbound]
+          rs0.name mustBe "attached"
 
 /*          await().until(conditionNonEmpty)
           val rs1 = Json.parse(queue.take()).as[List[WsOutbound]]
