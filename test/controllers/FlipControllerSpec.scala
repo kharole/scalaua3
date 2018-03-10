@@ -56,6 +56,11 @@ class FlipControllerSpec extends PlaySpec with ScalaFutures {
           await().until(conditionNonEmpty)
           val rs2 = Json.parse(queue.take()).as[WsOutbound]
           rs2.name mustBe "bet-accepted"
+
+          await().until(conditionNonEmpty)
+          val rs3 = Json.parse(queue.take()).as[WsOutbound]
+          rs3.name mustBe "flipped"
+
         }
 
       }

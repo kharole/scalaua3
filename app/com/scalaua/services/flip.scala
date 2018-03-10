@@ -126,6 +126,12 @@ case class WsBetAccepted(bet: Int, alternative: String, name: String = "bet-acce
 
 case class WsAttached(name: String = "attached") extends WsOutbound
 
+case class WsFlipped(result: String, outcome: String, win: Int, name: String = "flipped") extends WsOutbound
+
+case class WsStatusUpdated(status: String, name: String = "status-updated") extends WsOutbound
+
+case class WsNewRoundStarted(round: Int, name: String = "new-round-started") extends WsOutbound
+
 //json
 
 object Attach {
@@ -174,11 +180,29 @@ object WsBetAccepted {
   implicit val format: OFormat[WsBetAccepted] = Json.format[WsBetAccepted]
 }
 
+object WsFlipped {
+  implicit val format: OFormat[WsFlipped] = Json.format[WsFlipped]
+
+}
+
+object WsStatusUpdated {
+  implicit val format: OFormat[WsStatusUpdated] = Json.format[WsStatusUpdated]
+
+}
+
+object WsNewRoundStarted {
+  implicit val format: OFormat[WsNewRoundStarted] = Json.format[WsNewRoundStarted]
+}
+
+
 object WsOutbound {
   val w: OWrites[WsOutbound] = {
     case wso: WsAttached => WsAttached.format.writes(wso)
     case wso: WsBalanceUpdated => WsBalanceUpdated.format.writes(wso)
     case wso: WsBetAccepted => WsBetAccepted.format.writes(wso)
+    case wso: WsFlipped => WsFlipped.format.writes(wso)
+    case wso: WsStatusUpdated => WsStatusUpdated.format.writes(wso)
+    case wso: WsNewRoundStarted => WsNewRoundStarted.format.writes(wso)
 
   }
   val r: Reads[WsOutbound] = (json: JsValue) => {
@@ -186,6 +210,9 @@ object WsOutbound {
       case "attached" => WsAttached.format.reads(json)
       case "balance-updated" => WsBalanceUpdated.format.reads(json)
       case "bet-accepted" => WsBetAccepted.format.reads(json)
+      case "flipped" => WsFlipped.format.reads(json)
+      case "status-updated" => WsStatusUpdated.format.reads(json)
+      case "new-round-started" => WsNewRoundStarted.format.reads(json)
     }
   }
   implicit val format: OFormat[WsOutbound] = OFormat(r, w)

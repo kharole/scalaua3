@@ -25,7 +25,8 @@ class FlipGameActor @Inject()(@Named("merchant-actor") walletRef: ActorRef)
 
     pendingRequest match {
       case Some(p) if !p.undelivered && p.nrOfAttempts < 10 =>
-        context.system.scheduler.scheduleOnce(30 seconds, () => walletRef ! p.walletRequest)
+        val redeliveryInterval = 30.seconds
+        context.system.scheduler.scheduleOnce(redeliveryInterval * p.nrOfAttempts, () => walletRef ! p.walletRequest)
         ()
       case _ =>
         ()
