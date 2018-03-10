@@ -112,7 +112,7 @@ case class WinAttemptFailed(reason: WalletFailure5xx, timestamp: Instant) extend
 
 case class NewRoundStarted(timestamp: Instant) extends FlipEvent
 
-case class Attached(timestamp: Instant, name: String = "attached") extends FlipEvent with WsOutbound
+case class Attached(timestamp: Instant) extends FlipEvent
 
 case class Detached(timestamp: Instant) extends FlipEvent
 
@@ -120,7 +120,11 @@ sealed trait WsOutbound {
   val name: String
 }
 
-case class BalanceUpdated(value: Int, name: String = "balance-updated") extends WsOutbound
+case class WsBalanceUpdated(value: Int, name: String = "balance-updated") extends WsOutbound
+
+case class WsBetAccepted(bet: Int, alternative: String, name: String = "bet-accepted") extends WsOutbound
+
+case class WsAttached(name: String = "attached") extends WsOutbound
 
 //json
 
@@ -158,24 +162,30 @@ object WsInbound {
   implicit val format: OFormat[WsInbound] = OFormat(r, w)
 }
 
-object Attached {
-  implicit val format: OFormat[Attached] = Json.format[Attached]
+object WsAttached {
+  implicit val format: OFormat[WsAttached] = Json.format[WsAttached]
 }
 
-object BalanceUpdated {
-  implicit val format: OFormat[BalanceUpdated] = Json.format[BalanceUpdated]
+object WsBalanceUpdated {
+  implicit val format: OFormat[WsBalanceUpdated] = Json.format[WsBalanceUpdated]
+}
+
+object WsBetAccepted {
+  implicit val format: OFormat[WsBetAccepted] = Json.format[WsBetAccepted]
 }
 
 object WsOutbound {
   val w: OWrites[WsOutbound] = {
-    case c: Attached => Attached.format.writes(c)
-    case c: BalanceUpdated => BalanceUpdated.format.writes(c)
+    case wso: WsAttached => WsAttached.format.writes(wso)
+    case wso: WsBalanceUpdated => WsBalanceUpdated.format.writes(wso)
+    case wso: WsBetAccepted => WsBetAccepted.format.writes(wso)
 
   }
   val r: Reads[WsOutbound] = (json: JsValue) => {
     (json \ "name").as[String] match {
-      case "attached" => Attached.format.reads(json)
-      case "balance-updated" => BalanceUpdated.format.reads(json)
+      case "attached" => WsAttached.format.reads(json)
+      case "balance-updated" => WsBalanceUpdated.format.reads(json)
+      case "bet-accepted" => WsBetAccepted.format.reads(json)
     }
   }
   implicit val format: OFormat[WsOutbound] = OFormat(r, w)

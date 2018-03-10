@@ -4,7 +4,7 @@ import java.util.concurrent.{ArrayBlockingQueue, Callable}
 import java.util.function.Consumer
 
 import org.awaitility.Awaitility._
-import com.scalaua.services.{Attach, BalanceUpdated, FlipCoin, WsOutbound}
+import com.scalaua.services.{Attach, WsBalanceUpdated, FlipCoin, WsOutbound}
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.play._
@@ -49,13 +49,13 @@ class FlipControllerSpec extends PlaySpec with ScalaFutures {
 
           await().until(conditionNonEmpty)
           val rs1 = Json.parse(queue.take()).as[WsOutbound]
-          rs1 mustBe BalanceUpdated(0)
-/*
-          webSocket.sendMessage(Json.toJson(FlipCoin(100, "head")).toString())
+          rs1 mustBe WsBalanceUpdated(0)
+
+          webSocket.sendMessage(Json.toJson(FlipCoin(5, "head")).toString())
 
           await().until(conditionNonEmpty)
-          val rs2 = Json.parse(queue.take()).as[List[WsOutbound]]
-          rs2.map(_.name) mustBe List("bet-accepted")*/
+          val rs2 = Json.parse(queue.take()).as[WsOutbound]
+          rs2.name mustBe "bet-accepted"
         }
 
       }

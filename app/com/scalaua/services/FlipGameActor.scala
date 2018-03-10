@@ -36,7 +36,7 @@ class FlipGameActor @Inject()(@Named("merchant-actor") walletRef: ActorRef)
     case evt: FlipEvent =>
       updateState(evt)
     case RecoveryCompleted =>
-      //sendPending(state)
+      sendPending(state.pendingRequest)
       log.info(s"Flip actor $persistenceId have completed recovery")
   }
 
@@ -47,8 +47,8 @@ class FlipGameActor @Inject()(@Named("merchant-actor") walletRef: ActorRef)
       walletRef ! WalletBalanceRequest()
       log.info("attached")
 
-    case BalanceResponse(balance) =>
-      client.get.ref ! BalanceUpdated(balance)
+    case br: BalanceResponse =>
+      client.get.ref ! br
 
     case cmd: FlipCommand if state.handleCommand(client.get.session, rng, props, Instant.now()).isDefinedAt(cmd) =>
       log.debug(s"Processing $cmd command in state: $state")
@@ -66,33 +66,16 @@ class FlipGameActor @Inject()(@Named("merchant-actor") walletRef: ActorRef)
   }
 
   private def persistEvent(event: FlipEvent): Unit = {
-    //val envelope = SlotEventEnvelope(gctx.actorId, state.roundId, gctx.epoch, gctx.player.currency, event)
     persist(event)(updateState)
   }
 
-  /*  def updateState(extEvent: SlotEventEnvelope): Unit =
-      updateState(extEvent.event)*/
-
   def updateState(event: FlipEvent): Unit = {
     log.debug(s"applying $event to state")
-
     val newState = state.handleEvent(props)(event)
 
-    // walletClient ! newState.walletImpact
-
     if (recoveryFinished) {
-      //if (newState.client.impacts.nonEmpty)
-      //gameClient.get ! ClientImpacts(newState.client.impacts.reverse)
+      client.get.ref ! event
       sendPending(newState.pendingRequest)
-      /*
-                sendPromotionProgress(event)
-                memorizeGameClient(event)
-                replyAndForgetGameClient(event, newState)
-                replyForOpsEvent(event, newState, state)
-                autoStartNewRound(newState)
-          sendPending(newState)
-                takeSnapshot(newState)
-      */
     }
 
     state = newState
