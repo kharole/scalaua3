@@ -38,16 +38,22 @@ class FlipWsActor(out: ActorRef, managerRef: ActorRef) extends Actor with ActorL
         out ! WsBetAccepted(amount, alternative)
       case BetsConfirmed(confirmation, result, timestamp) =>
         out ! WsFlipped(result, "", 0)
-      case BetError(reason, timestamp) => ???
-      case BetAttemptFailed(reason, timestamp) => ???
+      case BetError(reason, timestamp) =>
+        ???
+      case BetAttemptFailed(reason, timestamp) =>
+        ???
       case WinConfirmed(confirmation, timestamp) =>
         //out ! WsNewRoundStarted()
+      case WinError(reason, timestamp) =>
         ???
-      case WinError(reason, timestamp) => ???
-      case WinAttemptFailed(reason, timestamp) => ???
-      case NewRoundStarted(timestamp) => ???
-      case Attached(timestamp) => ???
-      case Detached(timestamp) => ???
+      case WinAttemptFailed(reason, timestamp) =>
+        ???
+      case NewRoundStarted(timestamp) =>
+        out ! WsNewRoundStarted(0)
+      case Attached(timestamp) =>
+        ???
+      case Detached(timestamp) =>
+        ???
     }
 
     case uo@_ =>
