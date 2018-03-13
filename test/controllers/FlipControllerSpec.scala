@@ -18,6 +18,13 @@ import scala.concurrent.duration._
 
 class FlipControllerSpec extends PlaySpec with ScalaFutures {
 
+  //TODO: send new round on attach
+  //TODO: send accumulated events on attach
+  //TODO: send status-updated
+  //TODO: send start-new-round on validation error
+  //TODO: send show(ok) msg on validation error
+  //TODO: send show/hide msg on wallet delays
+
   "FlipController" should {
     "attach and flip" in WsTestClient.withClient { client =>
       lazy val port: Int = Helpers.testServerPort

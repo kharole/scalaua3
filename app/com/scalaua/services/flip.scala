@@ -120,7 +120,7 @@ sealed trait WsOutbound {
   val name: String
 }
 
-case class WsBalanceUpdated(value: Int, name: String = "balance-updated") extends WsOutbound
+case class WsBalanceUpdated(balance: Int, name: String = "balance-updated") extends WsOutbound
 
 case class WsBetAccepted(bet: Int, alternative: String, name: String = "bet-accepted") extends WsOutbound
 
