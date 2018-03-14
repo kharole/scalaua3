@@ -5,7 +5,7 @@ import javax.inject._
 import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.Materializer
 import com.google.inject.name.Named
-import com.scalaua.services.{FlipCommand, FlipWsActor, WsInbound, WsOutbound}
+import com.scalaua.services.FlipWsActor
 import play.api.libs.streams.ActorFlow
 import play.api.mvc.WebSocket.MessageFlowTransformer
 import play.api.mvc._

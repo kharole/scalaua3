@@ -6,6 +6,8 @@ import javax.inject.Inject
 import akka.actor.{ActorLogging, ActorRef}
 import akka.persistence.{PersistentActor, RecoveryCompleted}
 import com.google.inject.name.Named
+
+import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
 
 case class ClientSession(ref: ActorRef, session: String)
@@ -21,7 +23,7 @@ class FlipGameActor @Inject()(@Named("merchant-actor") walletRef: ActorRef)
   var state: FlipState = FlipState.initial
 
   def sendPending(pendingRequest: Option[PendingRequest]): Unit = {
-    implicit val ec = context.dispatcher
+    implicit val ec: ExecutionContextExecutor = context.dispatcher
 
     pendingRequest match {
       case Some(p) if !p.undelivered && p.nrOfAttempts < 10 =>
@@ -42,7 +44,7 @@ class FlipGameActor @Inject()(@Named("merchant-actor") walletRef: ActorRef)
   }
 
   override def receiveCommand: Receive = {
-    case Attach(session, _) =>
+    case Attach(session) =>
       client = Some(ClientSession(sender(), session))
       client.get.ref ! Attached(Instant.now())
       walletRef ! WalletBalanceRequest()
