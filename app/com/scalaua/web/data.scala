@@ -30,6 +30,12 @@ case class WsStatusUpdated(status: String, name: String = "status-updated") exte
 
 case class WsNewRoundStarted(round: Int, name: String = "new-round-started") extends WsOutbound
 
+case class WsShowDisposableMessage(message: String, name: String = "show-disposable-message") extends WsOutbound
+
+case class WsShowBlockingMessage(message: String, name: String = "show-blocking-message") extends WsOutbound
+
+case class WsHideBlockingMessage(message: String, name: String = "hide-disposable-message") extends WsOutbound
+
 //json
 
 object WsAttach {

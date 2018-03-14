@@ -56,15 +56,15 @@ class FlipGameActor @Inject()(@Named("merchant-actor") walletRef: ActorRef)
     case cmd: FlipCommand if state.handleCommand(client.get.session, rng, props, Instant.now()).isDefinedAt(cmd) =>
       log.debug(s"Processing $cmd command in state: $state")
       state.handleCommand(client.get.session, rng, props, Instant.now())(cmd) match {
-        case error@Left(_) =>
+        case Left(error) =>
           client.get.ref ! error
         case Right(evt) =>
           persistEvent(evt)
       }
 
-    case unknown@_ =>
-      log.warning(s"Unhandled command $unknown")
-    //sender ! Left(Error(ERROR, GameErrorCodes.COMMAND_NOT_ALLOWED, s"Command is not allowed in current state", TimeUtils.now(), None))
+    case unexpected@_ =>
+      log.warning(s"Unexpected command $unexpected")
+      client.get.ref ! FlipError("error.unexpected.command")
 
   }
 

@@ -37,8 +37,11 @@ class FlipWsActor(out: ActorRef, managerRef: ActorRef) extends Actor with ActorL
     case BalanceResponse(balance) =>
       out ! WsBalanceUpdated(balance)
 
-    case uo@_ =>
-      log.error(s"unknown object $uo in web socket")
+    case FlipError(code) =>
+      WsShowDisposableMessage(code)
+
+    case unexpected@_ =>
+      log.error(s"unexpected object $unexpected in web socket")
 
   }
 

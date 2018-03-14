@@ -156,6 +156,7 @@ case class FlipState(roundId: Int,
   def gotoBetsAwaiting: FlipState = copy(status = BetsAwaiting, bet = None, result = None, roundId = roundId + 1)
 
   def handleCommand(implicit session: String, rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] =
+
     status match {
       case BetsAwaiting => BetsAwaitingBehaviour.handleCommand(this)
       case CollectingBets(_) => CollectingBetsBehaviour.handleCommand(this)
