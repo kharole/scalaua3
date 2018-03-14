@@ -62,21 +62,21 @@ class FlipWsActor(out: ActorRef, managerRef: ActorRef) extends Actor with ActorL
       case BetsConfirmed(_, result, _) =>
         List(WsFlipped(result, "", 0))
       case BetError(_, _) =>
-        ???
+        List()
       case BetAttemptFailed(_, _) =>
-        ???
+        List()
       case WinConfirmed(_, _) =>
         List()
       case WinError(_, _) =>
-        ???
+        List()
       case WinAttemptFailed(_, _) =>
-        ???
+        List()
       case NewRoundStarted(_) =>
         List(WsNewRoundStarted(0))
       case Attached(_) =>
-        ???
+        List()
       case Detached(_) =>
-        ???
+        List()
     }
   }
 }

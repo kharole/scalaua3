@@ -1,17 +1,16 @@
 package com.scalaua.services
 
 import java.time.Instant
+
 import scala.util.{Random, Right}
 
 
 object Rng {
-  def fixed(value: Int): Rng = (n: Int) => value
+  private val r = Random
 
-  def real: Rng = new Rng {
-    val r = Random
+  def real: Rng = (n: Int) => r.nextInt(n)
 
-    override def next(n: Int): Int = r.nextInt(n)
-  }
+  def fixed(value: Int): Rng = (_: Int) => value
 }
 
 trait Rng {
@@ -20,19 +19,7 @@ trait Rng {
 
 //model
 
-case class PendingRequest(walletRequest: WalletRequest, nrOfAttempts: Int = 0, undelivered: Boolean = false) {
-  def incNrOfAttempts: PendingRequest = copy(nrOfAttempts = nrOfAttempts + 1)
-
-  def resetNrOfAttempts: PendingRequest = copy(nrOfAttempts = 0)
-
-  def undeliver: PendingRequest = copy(undelivered = true)
-
-  def resetUndeliver: PendingRequest = copy(undelivered = false)
-
-  def delayMultiplier: Long = if (nrOfAttempts > 0) pow2to(nrOfAttempts - 1) else 0L
-
-  private def pow2to(n: Int): Long = 1L << n
-}
+case class PendingRequest(walletRequest: WalletRequest, nrOfAttempts: Int = 0, undelivered: Boolean = false)
 
 case class WalletBalanceRequest()
 
