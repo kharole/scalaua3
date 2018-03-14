@@ -10,8 +10,6 @@ import com.google.inject.name.Named
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
 
-case class ClientSession(ref: ActorRef, session: String)
-
 class FlipGameActor @Inject()(@Named("merchant-actor") walletRef: ActorRef)
   extends PersistentActor with ActorLogging {
 
@@ -19,7 +17,7 @@ class FlipGameActor @Inject()(@Named("merchant-actor") walletRef: ActorRef)
 
   private val rng: Rng = Rng.real
 
-  var client: Option[ClientSession] = None
+  var clientRef: Option[ActorRef] = None
   var state: FlipState = FlipState.initial
 
   def sendPending(pendingRequest: Option[PendingRequest]): Unit = {
@@ -46,24 +44,24 @@ class FlipGameActor @Inject()(@Named("merchant-actor") walletRef: ActorRef)
   override def receiveCommand: Receive = {
     case Attach(session) =>
       persistEvent(Attached(session, Instant.now()))
-      client = Some(ClientSession(sender(), session))
+      clientRef = Some(sender())
       walletRef ! WalletBalanceRequest()
 
     case br: BalanceResponse =>
-      client.get.ref ! br
+      clientRef.get ! br
 
-    case cmd: FlipCommand if state.handleCommand(client.get.session, rng, props, Instant.now()).isDefinedAt(cmd) =>
+    case cmd: FlipCommand if state.handleCommand(rng, props, Instant.now()).isDefinedAt(cmd) =>
       log.debug(s"processing $cmd command in state: $state")
-      state.handleCommand(client.get.session, rng, props, Instant.now())(cmd) match {
+      state.handleCommand(rng, props, Instant.now())(cmd) match {
         case Left(error) =>
-          client.get.ref ! error
+          clientRef.get ! error
         case Right(evt) =>
           persistEvent(evt)
       }
 
     case unexpected@_ =>
       log.warning(s"unexpected command $unexpected")
-      client.get.ref ! FlipError("error.unexpected.command")
+      clientRef.get ! FlipError("error.unexpected.command")
 
   }
 
@@ -80,7 +78,7 @@ class FlipGameActor @Inject()(@Named("merchant-actor") walletRef: ActorRef)
     }
 
     if (recoveryFinished) {
-      client.get.ref ! event
+      clientRef.get ! event
       sendPending(newState.pendingRequest)
     }
 

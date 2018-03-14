@@ -8,7 +8,7 @@ case class FlipPlayerSimulator(session: String, state: FlipState, props: FlipAct
 
   def startNewRound()(implicit rng: Rng, ts: Instant): Either[FlipError, FlipPlayerSimulator] = {
     val command = StartNewRound()
-    state.handleCommand(session, rng, props, ts)(command) match {
+    state.handleCommand(rng, props, ts)(command) match {
       case Right(event) => Right(copy(state = state.handleEvent(props)(event)))
       case Left(error) => Left(error)
     }
@@ -16,7 +16,7 @@ case class FlipPlayerSimulator(session: String, state: FlipState, props: FlipAct
 
   def flipCoin(bet: Int, alternative: String)(implicit rng: Rng, ts: Instant): Either[FlipError, FlipPlayerSimulator] = {
     val command = FlipCoin(bet, alternative)
-    state.handleCommand(session, rng, props, ts)(command) match {
+    state.handleCommand(rng, props, ts)(command) match {
       case Right(event) => Right(copy(state = state.handleEvent(props)(event)))
       case Left(error) => Left(error)
     }
@@ -26,7 +26,7 @@ case class FlipPlayerSimulator(session: String, state: FlipState, props: FlipAct
     case Some(pendingRequest) =>
       val pr = pendingRequest.walletRequest
       val command = WalletConfirmation(pr.id, pr.amount, 0, ts)
-      val event = state.handleCommand(session, rng, props, ts)(command).right.get
+      val event = state.handleCommand(rng, props, ts)(command).right.get
       copy(state = state.handleEvent(props)(event))
     case None =>
       this
