@@ -40,21 +40,20 @@ class FlipGameActor @Inject()(@Named("merchant-actor") walletRef: ActorRef)
       updateState(evt)
     case RecoveryCompleted =>
       sendPending(state.pendingRequest)
-      log.info(s"Flip actor $persistenceId have completed recovery")
+      log.info(s"flip actor $persistenceId have completed recovery")
   }
 
   override def receiveCommand: Receive = {
     case Attach(session) =>
+      persistEvent(Attached(session, Instant.now()))
       client = Some(ClientSession(sender(), session))
-      client.get.ref ! Attached(Instant.now())
       walletRef ! WalletBalanceRequest()
-      log.info("attached")
 
     case br: BalanceResponse =>
       client.get.ref ! br
 
     case cmd: FlipCommand if state.handleCommand(client.get.session, rng, props, Instant.now()).isDefinedAt(cmd) =>
-      log.debug(s"Processing $cmd command in state: $state")
+      log.debug(s"processing $cmd command in state: $state")
       state.handleCommand(client.get.session, rng, props, Instant.now())(cmd) match {
         case Left(error) =>
           client.get.ref ! error
@@ -63,7 +62,7 @@ class FlipGameActor @Inject()(@Named("merchant-actor") walletRef: ActorRef)
       }
 
     case unexpected@_ =>
-      log.warning(s"Unexpected command $unexpected")
+      log.warning(s"unexpected command $unexpected")
       client.get.ref ! FlipError("error.unexpected.command")
 
   }
@@ -74,7 +73,11 @@ class FlipGameActor @Inject()(@Named("merchant-actor") walletRef: ActorRef)
 
   def updateState(event: FlipEvent): Unit = {
     log.debug(s"applying $event to state")
-    val newState = state.handleEvent(props)(event)
+    val newState = event match {
+      case Attached(session, _) => state.attach(session)
+      case Detached(_) => state.detach()
+      case evt => state.handleEvent(props)(evt)
+    }
 
     if (recoveryFinished) {
       client.get.ref ! event

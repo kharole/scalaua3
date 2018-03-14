@@ -76,7 +76,7 @@ class FlipWsActor(out: ActorRef, managerRef: ActorRef) extends Actor with ActorL
         List()
       case NewRoundStarted(_) =>
         List(WsNewRoundStarted(0))
-      case Attached(_) =>
+      case Attached(_, _) =>
         List()
       case Detached(_) =>
         List()

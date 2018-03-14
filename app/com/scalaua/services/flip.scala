@@ -92,7 +92,7 @@ case class WinAttemptFailed(reason: WalletFailure5xx, timestamp: Instant) extend
 
 case class NewRoundStarted(timestamp: Instant) extends FlipEvent
 
-case class Attached(timestamp: Instant) extends FlipEvent
+case class Attached(session: String, timestamp: Instant) extends FlipEvent
 
 case class Detached(timestamp: Instant) extends FlipEvent
 
@@ -120,7 +120,13 @@ case class FlipBet(amount: Int, alternative: String)
 case class FlipState(roundId: Int,
                      status: FlipStatus,
                      bet: Option[FlipBet] = None,
-                     result: Option[FlipResult] = None) {
+                     result: Option[FlipResult] = None,
+                     session: Option[String] = None) {
+
+  def attach(newSession: String): FlipState = copy(session = Some(newSession))
+
+  def detach(): FlipState = copy(session = None)
+
   def verify(wc: WalletConfirmation): WalletConfirmation = {
     pendingRequest match {
       case Some(p) if p.walletRequest.id == wc.id =>
@@ -156,7 +162,6 @@ case class FlipState(roundId: Int,
   def gotoBetsAwaiting: FlipState = copy(status = BetsAwaiting, bet = None, result = None, roundId = roundId + 1)
 
   def handleCommand(implicit session: String, rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] =
-
     status match {
       case BetsAwaiting => BetsAwaitingBehaviour.handleCommand(this)
       case CollectingBets(_) => CollectingBetsBehaviour.handleCommand(this)
