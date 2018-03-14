@@ -47,6 +47,10 @@ class FlipGameActor @Inject()(@Named("merchant-actor") walletRef: ActorRef)
       clientRef = Some(sender())
       walletRef ! WalletBalanceRequest()
 
+    case Detach() =>
+      persistEvent(Detached(Instant.now()))
+      //clientRef = None
+      
     case br: BalanceResponse =>
       clientRef.get ! br
 

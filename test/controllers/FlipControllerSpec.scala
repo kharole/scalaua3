@@ -74,6 +74,13 @@ class FlipControllerSpec extends PlaySpec with ScalaFutures {
           await().until(conditionNonEmpty)
           val rs4 = Json.parse(queue.take()).as[WsOutbound]
           rs4.name mustBe "new-round-started"
+
+          webSocket.sendMessage(Json.toJson(WsDetach()).toString())
+
+          await().until(conditionNonEmpty)
+          val rs5 = Json.parse(queue.take()).as[WsOutbound]
+          rs5.name mustBe "detached"
+
         }
 
       }

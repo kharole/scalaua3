@@ -22,9 +22,9 @@ class FlipWsActor(out: ActorRef, managerRef: ActorRef) extends Actor with ActorL
   def detached: Receive = {
     case wsa: WsAttach =>
       managerRef ! toFlipCommand(wsa)
-    case _: Attached =>
+    case a: Attached =>
       context.become(attached(sender()))
-      out ! WsAttached()
+      toWsOutbounds(a).foreach(out ! _)
   }
 
   def attached(gameRef: ActorRef): Receive = {
@@ -60,7 +60,7 @@ class FlipWsActor(out: ActorRef, managerRef: ActorRef) extends Actor with ActorL
 
   private def toWsOutbounds(evt: FlipEvent): List[WsOutbound] = {
     evt match {
-      case BetsAccepted(_, amount, alternative, _) =>
+      case BetsAccepted(amount, alternative, _) =>
         List(WsBetAccepted(amount, alternative))
       case BetsConfirmed(_, result, _) =>
         List(WsFlipped(result, "", 0))
@@ -74,12 +74,12 @@ class FlipWsActor(out: ActorRef, managerRef: ActorRef) extends Actor with ActorL
         List()
       case WinAttemptFailed(_, _) =>
         List()
-      case NewRoundStarted(_) =>
-        List(WsNewRoundStarted(0))
+      case NewRoundStarted(roundId, _) =>
+        List(WsNewRoundStarted(roundId))
       case Attached(_, _) =>
-        List()
+        List(WsAttached())
       case Detached(_) =>
-        List()
+        List(WsDetached())
     }
   }
 }

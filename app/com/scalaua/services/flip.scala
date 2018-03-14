@@ -71,7 +71,6 @@ trait FlipAttemptFailed {
   val reason: WalletFailure5xx
 }
 
-
 trait ConfirmationEvent {
   val confirmation: WalletConfirmation
 }
@@ -90,7 +89,7 @@ case class WinError(reason: WalletError4xx, timestamp: Instant) extends FlipEven
 
 case class WinAttemptFailed(reason: WalletFailure5xx, timestamp: Instant) extends FlipEvent with FlipAttemptFailed
 
-case class NewRoundStarted(timestamp: Instant) extends FlipEvent
+case class NewRoundStarted(roundId: Int, timestamp: Instant) extends FlipEvent
 
 case class Attached(session: String, timestamp: Instant) extends FlipEvent
 
@@ -159,7 +158,7 @@ case class FlipState(roundId: Int,
 
   def gotoRoundFinished: FlipState = copy(status = RoundFinished)
 
-  def gotoBetsAwaiting: FlipState = copy(status = BetsAwaiting, bet = None, result = None, roundId = roundId + 1)
+  def gotoBetsAwaiting(newRoundId: Int): FlipState = copy(status = BetsAwaiting, bet = None, result = None, roundId = newRoundId)
 
   def handleCommand(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] =
     status match {
@@ -246,12 +245,12 @@ object PayingOutBehaviour extends FlipBehaviour {
 object RoundFinishedBehaviour extends FlipBehaviour {
   override def handleCommand(state: FlipState)(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = {
     case StartNewRound() =>
-      Right(NewRoundStarted(ts))
+      Right(NewRoundStarted(state.roundId + 1, ts))
   }
 
   override def handleEvent(state: FlipState)(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = {
-    case NewRoundStarted(_) =>
+    case NewRoundStarted(newRoundId, _) =>
       state
-        .gotoBetsAwaiting
+        .gotoBetsAwaiting(newRoundId)
   }
 }
