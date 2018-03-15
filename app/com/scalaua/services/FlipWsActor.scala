@@ -25,6 +25,9 @@ class FlipWsActor(out: ActorRef, managerRef: ActorRef) extends Actor with ActorL
     case a: Attached =>
       context.become(attached(sender()))
       toWsOutbounds(a).foreach(out ! _)
+
+    case unexpected@_ =>
+      log.error(s"unexpected object $unexpected in detached web socket")
   }
 
   def attached(gameRef: ActorRef): Receive = {
@@ -41,7 +44,7 @@ class FlipWsActor(out: ActorRef, managerRef: ActorRef) extends Actor with ActorL
       WsShowDisposableMessage(code)
 
     case unexpected@_ =>
-      log.error(s"unexpected object $unexpected in web socket")
+      log.error(s"unexpected object $unexpected in attached web socket")
 
   }
 

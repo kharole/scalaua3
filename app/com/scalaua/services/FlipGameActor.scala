@@ -19,38 +19,25 @@ class FlipGameActor @Inject()(@Named("merchant-actor") walletRef: ActorRef)
 
   var clientRef: Option[ActorRef] = None
   var state: FlipState = FlipState.initial
+  var events: List[FlipEvent] = List(NewRoundStarted(0, Instant.now()))
 
-  def sendPending(pendingRequest: Option[PendingRequest]): Unit = {
-    implicit val ec: ExecutionContextExecutor = context.dispatcher
-
-    pendingRequest match {
-      case Some(p) if !p.undelivered && p.nrOfAttempts < 10 =>
-        val redeliveryInterval = 30.seconds
-        context.system.scheduler.scheduleOnce(redeliveryInterval * p.nrOfAttempts, () => walletRef ! p.walletRequest)
-        ()
-      case _ =>
-        ()
-    }
-  }
-
+  override def persistenceId: String = s"flip-${props.playerId}"
+  
   override def receiveRecover: Receive = {
     case evt: FlipEvent =>
       updateState(evt)
     case RecoveryCompleted =>
-      sendPending(state.pendingRequest)
+      sendToWallet(state.pendingRequest)
       log.info(s"flip actor $persistenceId have completed recovery")
   }
 
   override def receiveCommand: Receive = {
     case Attach(session) =>
       persistEvent(Attached(session, Instant.now()))
-      clientRef = Some(sender())
-      walletRef ! WalletBalanceRequest()
 
     case Detach() =>
       persistEvent(Detached(Instant.now()))
-      //clientRef = None
-      
+
     case br: BalanceResponse =>
       clientRef.get ! br
 
@@ -75,19 +62,52 @@ class FlipGameActor @Inject()(@Named("merchant-actor") walletRef: ActorRef)
 
   def updateState(event: FlipEvent): Unit = {
     log.debug(s"applying $event to state")
-    val newState = event match {
+
+    state = event match {
       case Attached(session, _) => state.attach(session)
       case Detached(_) => state.detach()
       case evt => state.handleEvent(props)(evt)
     }
 
-    if (recoveryFinished) {
-      clientRef.get ! event
-      sendPending(newState.pendingRequest)
+    events = event match {
+      case Attached(_, _) | Detached(_) => events
+      case nrs: NewRoundStarted => List(nrs)
+      case evt => evt :: events
     }
 
-    state = newState
+    if (recoveryFinished) {
+      sendToClient(event)
+      sendToWallet(state.pendingRequest)
+    }
   }
 
-  override def persistenceId: String = s"flip-${props.playerId}"
+  //side effects
+  private def sendToClient(event: FlipEvent): Unit = {
+    event match {
+      case a: Attached =>
+        clientRef = Some(sender())
+        clientRef.get ! a
+        events.foreach(clientRef.get ! _)
+        walletRef ! WalletBalanceRequest()
+      case d: Detached =>
+        clientRef.get ! d
+        clientRef = None
+      case e =>
+        clientRef.get ! e
+    }
+  }
+
+  private def sendToWallet(pendingRequest: Option[PendingRequest]): Unit = {
+    implicit val ec: ExecutionContextExecutor = context.dispatcher
+
+    pendingRequest match {
+      case Some(p) if !p.undelivered && p.nrOfAttempts < 10 =>
+        val redeliveryInterval = 30.seconds
+        context.system.scheduler.scheduleOnce(redeliveryInterval * p.nrOfAttempts, () => walletRef ! p.walletRequest)
+        ()
+      case _ =>
+        ()
+    }
+  }
+
 }

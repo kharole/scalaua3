@@ -51,35 +51,39 @@ class FlipControllerSpec extends PlaySpec with ScalaFutures {
           webSocket.sendMessage(Json.toJson(WsAttach("AAA")).toString())
 
           await().until(conditionNonEmpty)
-          val rs0 = Json.parse(queue.take()).as[WsOutbound]
-          rs0.name mustBe "attached"
+          val rs00 = Json.parse(queue.take()).as[WsOutbound]
+          rs00.name mustBe "attached"
 
           await().until(conditionNonEmpty)
-          val rs1 = Json.parse(queue.take()).as[WsOutbound]
-          rs1 mustBe WsBalanceUpdated(0)
+          val rs01 = Json.parse(queue.take()).as[WsOutbound]
+          rs01.name mustBe "new-round-started"
+
+          await().until(conditionNonEmpty)
+          val rs02 = Json.parse(queue.take()).as[WsOutbound]
+          rs02 mustBe WsBalanceUpdated(0)
 
           webSocket.sendMessage(Json.toJson(WsFlipCoin(5, "head")).toString())
 
           await().until(conditionNonEmpty)
-          val rs2 = Json.parse(queue.take()).as[WsOutbound]
-          rs2.name mustBe "bet-accepted"
+          val rs10 = Json.parse(queue.take()).as[WsOutbound]
+          rs10.name mustBe "bet-accepted"
 
           await().until(conditionNonEmpty)
-          val rs3 = Json.parse(queue.take()).as[WsOutbound]
-          rs3.name mustBe "flipped"
+          val rs11 = Json.parse(queue.take()).as[WsOutbound]
+          rs11.name mustBe "flipped"
 
           await().until(conditionOpen)
           webSocket.sendMessage(Json.toJson(WsStartNewRound()).toString())
 
           await().until(conditionNonEmpty)
-          val rs4 = Json.parse(queue.take()).as[WsOutbound]
-          rs4.name mustBe "new-round-started"
+          val rs20 = Json.parse(queue.take()).as[WsOutbound]
+          rs20.name mustBe "new-round-started"
 
           webSocket.sendMessage(Json.toJson(WsDetach()).toString())
 
           await().until(conditionNonEmpty)
-          val rs5 = Json.parse(queue.take()).as[WsOutbound]
-          rs5.name mustBe "detached"
+          val rs30 = Json.parse(queue.take()).as[WsOutbound]
+          rs30.name mustBe "detached"
 
         }
 
