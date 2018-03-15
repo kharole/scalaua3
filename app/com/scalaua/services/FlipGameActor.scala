@@ -87,7 +87,7 @@ class FlipGameActor @Inject()(@Named("merchant-actor") walletRef: ActorRef)
       case a: Attached =>
         clientRef = Some(sender())
         clientRef.get ! a
-        events.foreach(clientRef.get ! _)
+        events.reverse.foreach(clientRef.get ! _)
         walletRef ! WalletBalanceRequest()
       case d: Detached =>
         clientRef.get ! d
