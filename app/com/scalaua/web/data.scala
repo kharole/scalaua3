@@ -104,6 +104,17 @@ object WsNewRoundStarted {
   implicit val format: OFormat[WsNewRoundStarted] = Json.format[WsNewRoundStarted]
 }
 
+object WsShowDisposableMessage {
+  implicit val format: OFormat[WsShowDisposableMessage] = Json.format[WsShowDisposableMessage]
+}
+
+object WsShowBlockingMessage {
+  implicit val format: OFormat[WsShowBlockingMessage] = Json.format[WsShowBlockingMessage]
+}
+
+object WsHideBlockingMessage {
+  implicit val format: OFormat[WsHideBlockingMessage] = Json.format[WsHideBlockingMessage]
+}
 
 object WsOutbound {
   val w: OWrites[WsOutbound] = {
@@ -114,8 +125,12 @@ object WsOutbound {
     case wso: WsFlipped => WsFlipped.format.writes(wso)
     case wso: WsStatusUpdated => WsStatusUpdated.format.writes(wso)
     case wso: WsNewRoundStarted => WsNewRoundStarted.format.writes(wso)
+    case wso: WsShowDisposableMessage => WsShowDisposableMessage.format.writes(wso)
+    case wso: WsShowBlockingMessage => WsShowBlockingMessage.format.writes(wso)
+    case wso: WsHideBlockingMessage => WsHideBlockingMessage.format.writes(wso)
 
   }
+
   val r: Reads[WsOutbound] = (json: JsValue) => {
     (json \ "name").as[String] match {
       case "attached" => WsAttached.format.reads(json)
@@ -125,6 +140,9 @@ object WsOutbound {
       case "flipped" => WsFlipped.format.reads(json)
       case "status-updated" => WsStatusUpdated.format.reads(json)
       case "new-round-started" => WsNewRoundStarted.format.reads(json)
+      case "show-disposable-message" => WsShowDisposableMessage.format.reads(json)
+      case "show-blocking-message" => WsShowBlockingMessage.format.reads(json)
+      case "hide-blocking-message" => WsHideBlockingMessage.format.reads(json)
     }
   }
   implicit val format: OFormat[WsOutbound] = OFormat(r, w)

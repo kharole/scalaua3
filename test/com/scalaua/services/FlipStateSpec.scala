@@ -10,7 +10,9 @@ class FlipStateSpec extends FlatSpec with Matchers {
     implicit val rng: Rng = Rng.fixed(0)
     implicit val ts: Instant = Instant.now()
 
-    var simulator = FlipPlayerSimulator("AAA", FlipState.initial, FlipActorProps("playerA"))
+    var simulator = FlipPlayerSimulator(FlipState.initial, FlipActorProps("playerA"))
+
+    simulator = simulator.attach("AAA")
 
     simulator.status shouldBe "BetsAwaiting"
     simulator = simulator.flipCoin(3, "head").right.get
@@ -29,6 +31,8 @@ class FlipStateSpec extends FlatSpec with Matchers {
     simulator.state.roundId shouldBe 1
     simulator.state.bet shouldBe None
     simulator.state.result shouldBe None
+
+    simulator = simulator.detach()
   }
 
 }

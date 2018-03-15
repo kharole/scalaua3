@@ -38,7 +38,7 @@ class FlipGameActor @Inject()(@Named("merchant-actor") walletRef: ActorRef)
     case Detach() =>
       persistEvent(Detached(Instant.now()))
 
-    case br: BalanceResponse =>
+    case br: BalanceResponse if clientRef.nonEmpty =>
       clientRef.get ! br
 
     case cmd: FlipCommand if state.handleCommand(rng, props, Instant.now()).isDefinedAt(cmd) =>

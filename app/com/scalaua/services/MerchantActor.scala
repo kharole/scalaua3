@@ -11,7 +11,7 @@ class MerchantActor @Inject()() extends Actor with ActorLogging {
     case WalletBalanceRequest() =>
       sender() ! BalanceResponse(0)
 
-    case WalletRequest(id, requestType, amount, ts) =>
+    case WalletRequest(id, requestType, amount, ts, playerId, session) =>
       sender() ! WalletConfirmation(id, amount, 23, Instant.now())
   }
 
