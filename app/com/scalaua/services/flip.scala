@@ -208,7 +208,8 @@ object CollectingBetsBehaviour extends FlipBehaviour {
   override def handleCommand(state: FlipState)(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = {
     case wc: WalletConfirmation =>
       val confirmation = state.verify(wc)
-      val result = if (rng.next(2) == 0) "head" else "tail"
+      //val result = if (rng.next(2) == 0) "head" else "tail"
+      val result = "head"
       val (outcome, win) = if (result == state.bet.get.alternative)
         ("win", state.bet.get.amount * 2)
       else
