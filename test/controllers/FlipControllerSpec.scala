@@ -15,10 +15,12 @@ class FlipControllerSpec extends PlaySpec with WsSpec {
       sendMessage(WsAttach("AAA"))
       receiveMessage.name mustBe "attached"
       receiveMessage.name mustBe "new-round-started"
-      receiveMessage mustBe WsBalanceUpdated(0)
+      receiveMessage.name mustBe "balance-updated"
       sendMessage(WsFlipCoin(5, "head"))
       receiveMessage.name mustBe "bet-accepted"
       receiveMessage.name mustBe "flipped"
+      receiveMessage.name mustBe "balance-updated"
+      receiveMessage.name mustBe "balance-updated"
       sendMessage(WsStartNewRound())
       receiveMessage.name mustBe "new-round-started"
       sendMessage(WsDetach())
@@ -29,10 +31,13 @@ class FlipControllerSpec extends PlaySpec with WsSpec {
       sendMessage(WsAttach("AAA"))
       receiveMessage.name mustBe "attached"
       receiveMessage.name mustBe "new-round-started"
-      receiveMessage mustBe WsBalanceUpdated(0)
+      receiveMessage.name mustBe "balance-updated"
       sendMessage(WsFlipCoin(5, "head"))
       receiveMessage.name mustBe "bet-accepted"
       receiveMessage.name mustBe "flipped"
+      receiveMessage.name mustBe "balance-updated"
+      receiveMessage.name mustBe "balance-updated"
+
       sendMessage(WsDetach())
       receiveMessage.name mustBe "detached"
       sendMessage(WsAttach("AAA"))
@@ -41,6 +46,8 @@ class FlipControllerSpec extends PlaySpec with WsSpec {
       receiveMessage.name mustBe "bet-accepted"
       receiveMessage.name mustBe "flipped"
       sendMessage(WsStartNewRound())
+      receiveMessage.name mustBe "balance-updated"
+      receiveMessage.name mustBe "balance-updated"
       receiveMessage.name mustBe "balance-updated"
       receiveMessage.name mustBe "new-round-started"
       sendMessage(WsDetach())
@@ -51,7 +58,7 @@ class FlipControllerSpec extends PlaySpec with WsSpec {
       sendMessage(WsAttach("AAA"))
       receiveMessage.name mustBe "attached"
       receiveMessage.name mustBe "new-round-started"
-      receiveMessage mustBe WsBalanceUpdated(0)
+      receiveMessage.name mustBe "balance-updated"
       sendMessage(WsFlipCoin(-5, "head"))
       receiveMessage mustBe WsShowDisposableMessage("error.invalid.bet.value")
       sendMessage(WsDetach())

@@ -21,7 +21,7 @@ trait Rng {
 
 case class PendingRequest(walletRequest: WalletRequest, nrOfAttempts: Int = 0, undelivered: Boolean = false)
 
-case class WalletBalanceRequest()
+case class WalletBalanceRequest(playerId: String, session: String)
 
 case class WalletRequest(id: String, requestType: String, amount: Int, ts: Instant, playerId: String, session: String)
 
@@ -77,7 +77,7 @@ trait ConfirmationEvent {
 
 case class BetsAccepted(amount: Int, alternative: String, timestamp: Instant) extends FlipEvent
 
-case class BetsConfirmed(confirmation: WalletConfirmation, result: String, timestamp: Instant) extends FlipEvent with ConfirmationEvent
+case class BetsConfirmed(confirmation: WalletConfirmation, result: String, outcome: String, win: Int, timestamp: Instant) extends FlipEvent with ConfirmationEvent
 
 case class BetError(reason: WalletError4xx, timestamp: Instant) extends FlipEvent with FlipWalletError
 
@@ -150,10 +150,9 @@ case class FlipState(roundId: Int,
     copy(status = CollectingBets(p))
   }
 
-  def gotoPayingOut(r: String, ts: Instant)(implicit props: FlipActorProps): FlipState = {
-    val win = if (r == bet.get.alternative) bet.get.amount * 2 else 0
-    val p = PendingRequest(WalletRequest(s"${props.playerId}.$roundId.WIN", "WIN", bet.get.amount, ts, props.playerId, session.get))
-    copy(status = PayingOut(p), result = Some(FlipResult(r, win)))
+  def gotoPayingOut(result: String, win: Int, ts: Instant)(implicit props: FlipActorProps): FlipState = {
+    val p = PendingRequest(WalletRequest(s"${props.playerId}.$roundId.WIN", "WIN", win, ts, props.playerId, session.get))
+    copy(status = PayingOut(p), result = Some(FlipResult(result, win)))
   }
 
   def gotoRoundFinished: FlipState = copy(status = RoundFinished)
@@ -210,7 +209,11 @@ object CollectingBetsBehaviour extends FlipBehaviour {
     case wc: WalletConfirmation =>
       val confirmation = state.verify(wc)
       val result = if (rng.next(1) == 0) "head" else "tail"
-      Right(BetsConfirmed(confirmation, result, ts))
+      val (outcome, win) = if (result == state.bet.get.alternative)
+        ("win", state.bet.get.amount * 2)
+      else
+        ("loss", 0)
+      Right(BetsConfirmed(confirmation, result, outcome, win, ts))
 
     case WalletError4xx(code) => ???
 
@@ -218,9 +221,9 @@ object CollectingBetsBehaviour extends FlipBehaviour {
   }
 
   override def handleEvent(state: FlipState)(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = {
-    case BetsConfirmed(_, result, ts) =>
+    case BetsConfirmed(_, result, _, win, ts) =>
       state
-        .gotoPayingOut(result, ts)
+        .gotoPayingOut(result, win, ts)
   }
 }
 

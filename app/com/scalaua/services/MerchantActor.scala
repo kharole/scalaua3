@@ -5,14 +5,28 @@ import javax.inject.Inject
 
 import akka.actor.{Actor, ActorLogging}
 
+import scala.collection.mutable
+
 class MerchantActor @Inject()() extends Actor with ActorLogging {
 
-  override def receive: Receive = {
-    case WalletBalanceRequest() =>
-      sender() ! BalanceResponse(0)
+  private val balances: mutable.Map[String, Int] = mutable.Map("playerA" -> 10)
 
+  override def receive: Receive = {
+    case WalletBalanceRequest(playerId, _) =>
+      sender() ! BalanceResponse(balances(playerId))
     case WalletRequest(id, requestType, amount, ts, playerId, session) =>
-      sender() ! WalletConfirmation(id, amount, 23, Instant.now())
+      requestType match {
+        case "BET" =>
+          val b = balances(playerId) - amount
+          balances(playerId) = b
+          sender() ! WalletConfirmation(id, amount, b, Instant.now())
+        case "WIN" =>
+          val b = balances(playerId) + amount
+          balances(playerId) = b
+          sender() ! WalletConfirmation(id, amount, b, Instant.now())
+        case _ =>
+          log.error("unexpected wallet request")
+      }
   }
 
 }

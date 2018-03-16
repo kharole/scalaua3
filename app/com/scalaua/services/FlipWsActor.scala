@@ -65,14 +65,14 @@ class FlipWsActor(out: ActorRef, managerRef: ActorRef) extends Actor with ActorL
     evt match {
       case BetsAccepted(amount, alternative, _) =>
         List(WsBetAccepted(amount, alternative))
-      case BetsConfirmed(_, result, _) =>
-        List(WsFlipped(result, "", 0))
+      case BetsConfirmed(confirmation, result, outcome, win, _) =>
+        List(WsFlipped(result, outcome, win), WsBalanceUpdated(confirmation.newBalance))
       case BetError(_, _) =>
         List()
       case BetAttemptFailed(_, _) =>
         List()
-      case WinConfirmed(_, _) =>
-        List()
+      case WinConfirmed(confirmation, _) =>
+        List(WsBalanceUpdated(confirmation.newBalance))
       case WinError(_, _) =>
         List()
       case WinAttemptFailed(_, _) =>
