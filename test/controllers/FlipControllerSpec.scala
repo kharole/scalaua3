@@ -11,7 +11,7 @@ class FlipControllerSpec extends PlaySpec with WsSpec {
   //TODO: send show/hide msg on wallet delays
 
   "FlipController" should {
-    "attach flip detach" in {
+    "attach flip and detach" in {
       sendMessage(WsAttach("AAA"))
       receiveMessage.name mustBe "attached"
       receiveMessage.name mustBe "new-round-started"
@@ -43,6 +43,17 @@ class FlipControllerSpec extends PlaySpec with WsSpec {
       sendMessage(WsStartNewRound())
       receiveMessage.name mustBe "balance-updated"
       receiveMessage.name mustBe "new-round-started"
+      sendMessage(WsDetach())
+      receiveMessage.name mustBe "detached"
+    }
+
+    "show disposable error" in {
+      sendMessage(WsAttach("AAA"))
+      receiveMessage.name mustBe "attached"
+      receiveMessage.name mustBe "new-round-started"
+      receiveMessage mustBe WsBalanceUpdated(0)
+      sendMessage(WsFlipCoin(-5, "head"))
+      receiveMessage mustBe WsShowDisposableMessage("error.invalid.bet.value")
       sendMessage(WsDetach())
       receiveMessage.name mustBe "detached"
     }

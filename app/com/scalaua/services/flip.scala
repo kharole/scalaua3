@@ -188,7 +188,7 @@ sealed trait FlipBehaviour {
 object BetsAwaitingBehaviour extends FlipBehaviour {
   override def handleCommand(state: FlipState)(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = {
     case FlipCoin(bet, alternative) =>
-      if (bet <= 0 || bet > 5) {
+      if (bet <= 1 || bet > 5) {
         Left(FlipError("error.invalid.bet.value"))
       } else if (alternative != "head" && alternative != "tail") {
         Left(FlipError("error.invalid.bet.alternative"))
