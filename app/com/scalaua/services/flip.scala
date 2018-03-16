@@ -75,9 +75,9 @@ trait ConfirmationEvent {
   val confirmation: WalletConfirmation
 }
 
-case class BetsAccepted(amount: Int, alternative: String, timestamp: Instant) extends FlipEvent
+case class BetAccepted(amount: Int, alternative: String, timestamp: Instant) extends FlipEvent
 
-case class BetsConfirmed(confirmation: WalletConfirmation, result: String, outcome: String, win: Int, timestamp: Instant) extends FlipEvent with ConfirmationEvent
+case class BetConfirmed(confirmation: WalletConfirmation, result: String, outcome: String, win: Int, timestamp: Instant) extends FlipEvent with ConfirmationEvent
 
 case class BetError(reason: WalletError4xx, roundId: Int, timestamp: Instant) extends FlipEvent with FlipWalletError
 
@@ -192,12 +192,12 @@ object BetsAwaitingBehaviour extends FlipBehaviour {
       } else if (alternative != "head" && alternative != "tail") {
         Left(FlipError("error.invalid.bet.alternative"))
       } else {
-        Right(BetsAccepted(bet, alternative, ts))
+        Right(BetAccepted(bet, alternative, ts))
       }
   }
 
   override def handleEvent(state: FlipState)(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = {
-    case BetsAccepted(amount, alternative, ts) =>
+    case BetAccepted(amount, alternative, ts) =>
       state
         .placeBet(amount, alternative)
         .gotoCollectingBets(ts)
@@ -213,7 +213,7 @@ object CollectingBetsBehaviour extends FlipBehaviour {
         ("win", state.bet.get.amount * 2)
       else
         ("loss", 0)
-      Right(BetsConfirmed(confirmation, result, outcome, win, ts))
+      Right(BetConfirmed(confirmation, result, outcome, win, ts))
 
     case e: WalletError4xx =>
       Right(BetError(e, state.roundId + 1, ts))
@@ -222,7 +222,7 @@ object CollectingBetsBehaviour extends FlipBehaviour {
   }
 
   override def handleEvent(state: FlipState)(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = {
-    case BetsConfirmed(_, result, _, win, ts) =>
+    case BetConfirmed(_, result, _, win, ts) =>
       state
         .gotoPayingOut(result, win, ts)
 
