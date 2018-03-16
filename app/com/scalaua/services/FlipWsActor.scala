@@ -64,21 +64,21 @@ class FlipWsActor(out: ActorRef, managerRef: ActorRef) extends Actor with ActorL
   private def toWsOutbounds(evt: FlipEvent): List[WsOutbound] = {
     evt match {
       case BetAccepted(amount, alternative, _) =>
-        List(WsBetAccepted(amount, alternative))
+        List(WsBetAccepted(amount, alternative), WsStatusUpdated("collecting"))
       case BetConfirmed(confirmation, result, outcome, win, _) =>
-        List(WsFlipped(result, outcome, win), WsBalanceUpdated(confirmation.newBalance))
+        List(WsFlipped(result, outcome, win), WsBalanceUpdated(confirmation.newBalance), WsStatusUpdated("paying-out"))
       case BetError(WalletError4xx(code), roundId, _) =>
-        List(WsShowDisposableMessage(code), WsNewRoundStarted(roundId))
+        List(WsShowDisposableMessage(code), WsNewRoundStarted(roundId), WsStatusUpdated("awaiting"))
       case BetAttemptFailed(_, _) =>
         List()
       case WinConfirmed(confirmation, _) =>
-        List(WsBalanceUpdated(confirmation.newBalance))
+        List(WsBalanceUpdated(confirmation.newBalance), WsStatusUpdated("finished"))
       case WinError(_, _) =>
         List()
       case WinAttemptFailed(_, _) =>
         List()
       case NewRoundStarted(roundId, _) =>
-        List(WsNewRoundStarted(roundId))
+        List(WsNewRoundStarted(roundId), WsStatusUpdated("awaiting"))
       case Attached(_, _) =>
         List(WsAttached())
       case Detached(_) =>
