@@ -18,8 +18,12 @@ class MerchantActor @Inject()() extends Actor with ActorLogging {
       requestType match {
         case "BET" =>
           val b = balances(playerId) - amount
-          balances(playerId) = b
-          sender() ! WalletConfirmation(id, amount, b, Instant.now())
+          if (b >= 0) {
+            balances(playerId) = b
+            sender() ! WalletConfirmation(id, amount, b, Instant.now())
+          } else {
+            sender() ! WalletError4xx("error.not-enough-credits")
+          }
         case "WIN" =>
           val b = balances(playerId) + amount
           balances(playerId) = b

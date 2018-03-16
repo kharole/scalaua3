@@ -79,7 +79,7 @@ case class BetsAccepted(amount: Int, alternative: String, timestamp: Instant) ex
 
 case class BetsConfirmed(confirmation: WalletConfirmation, result: String, outcome: String, win: Int, timestamp: Instant) extends FlipEvent with ConfirmationEvent
 
-case class BetError(reason: WalletError4xx, timestamp: Instant) extends FlipEvent with FlipWalletError
+case class BetError(reason: WalletError4xx, roundId: Int, timestamp: Instant) extends FlipEvent with FlipWalletError
 
 case class BetAttemptFailed(reason: WalletFailure5xx, timestamp: Instant) extends FlipEvent with FlipAttemptFailed
 
@@ -215,7 +215,8 @@ object CollectingBetsBehaviour extends FlipBehaviour {
         ("loss", 0)
       Right(BetsConfirmed(confirmation, result, outcome, win, ts))
 
-    case WalletError4xx(code) => ???
+    case e: WalletError4xx =>
+      Right(BetError(e, state.roundId + 1, ts))
 
     case WalletFailure5xx(code) => ???
   }
@@ -224,6 +225,10 @@ object CollectingBetsBehaviour extends FlipBehaviour {
     case BetsConfirmed(_, result, _, win, ts) =>
       state
         .gotoPayingOut(result, win, ts)
+
+    case BetError(_, newRoundId, _) =>
+      state
+        .gotoBetsAwaiting(newRoundId)
   }
 }
 

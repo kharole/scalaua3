@@ -35,4 +35,25 @@ class FlipStateSpec extends FlatSpec with Matchers {
     simulator = simulator.detach()
   }
 
+  it should "start new round on wallet error" in {
+    implicit val rng: Rng = Rng.fixed(0)
+    implicit val ts: Instant = Instant.now()
+
+    var simulator = FlipPlayerSimulator(FlipState.initial, FlipActorProps("playerA"))
+
+    simulator = simulator.attach("AAA")
+
+    simulator.status shouldBe "BetsAwaiting"
+    simulator.state.roundId shouldBe 0
+
+    simulator = simulator.flipCoin(3, "head").right.get
+    simulator.state.bet shouldBe Some(FlipBet(3, "head"))
+    simulator.status shouldBe "CollectingBets"
+
+    simulator = simulator.error("error.not-enough-credits")
+    simulator.status shouldBe "BetsAwaiting"
+    simulator.state.roundId shouldBe 1
+
+    simulator = simulator.detach()
+  }
 }

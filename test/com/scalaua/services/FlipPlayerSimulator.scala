@@ -40,6 +40,15 @@ case class FlipPlayerSimulator(state: FlipState, props: FlipActorProps) {
       this
   }
 
+  def error(code: String)(implicit rng: Rng, ts: Instant): FlipPlayerSimulator = state.pendingRequest match {
+    case Some(_) =>
+      val command = WalletError4xx(code)
+      val event = state.handleCommand(rng, props, ts)(command).right.get
+      copy(state = state.handleEvent(props)(event))
+    case None =>
+      this
+  }
+
   def status: String = state.status match {
     case BetsAwaiting => "BetsAwaiting"
     case CollectingBets(_) => "CollectingBets"
