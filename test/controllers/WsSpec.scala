@@ -77,6 +77,7 @@ trait WsSpec extends GuiceOneServerPerSuite with ScalaFutures {
         val newConfigMap = args.configMap + ("org.scalatestplus.web.webSocket" -> ws) + ("org.scalatestplus.web.webSocket.queue" -> queue)
         val newArgs = args.copy(configMap = newConfigMap)
         val status = super.runTest(testName, newArgs)
+        webSocket.get.close()
         status
 
       }
