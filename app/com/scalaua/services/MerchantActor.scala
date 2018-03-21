@@ -9,11 +9,14 @@ import scala.collection.mutable
 
 class MerchantActor @Inject()() extends Actor with ActorLogging {
 
-  private val balances: mutable.Map[String, Int] = mutable.Map("playerA" -> 10)
+  val initialBalance = 10
+  val balances: mutable.Map[String, Int] = mutable.Map()
 
   override def receive: Receive = {
     case WalletBalanceRequest(playerId, _) =>
+      balances.getOrElseUpdate(playerId, initialBalance)
       sender() ! BalanceResponse(balances(playerId))
+
     case WalletRequest(id, requestType, amount, ts, playerId, session) =>
       requestType match {
         case "BET" =>

@@ -5,9 +5,7 @@ import org.scalatestplus.play._
 
 class FlipControllerSpec extends PlaySpec with WsSpec {
 
-  //TODO: send status-updated
   //TODO: send start-new-round on validation error
-  //TODO: send show(ok) msg on validation error
   //TODO: send show/hide msg on wallet delays
 
   "FlipController" should {

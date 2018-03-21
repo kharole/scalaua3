@@ -16,7 +16,7 @@ import play.api.mvc._
   */
 @Singleton
 class FlipController @Inject()(cc: ControllerComponents,
-                               @Named("player-manager-actor") pma: ActorRef)
+                               @Named("manager-actor") pma: ActorRef)
                               (implicit system: ActorSystem, materializer: Materializer) extends InjectedController {
 
   /**

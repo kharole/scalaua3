@@ -3,17 +3,23 @@ package com.scalaua.services
 import java.time.Instant
 import javax.inject.Inject
 
-import akka.actor.{ActorLogging, ActorRef}
+import akka.actor.{Actor, ActorLogging, ActorRef}
 import akka.persistence.{PersistentActor, RecoveryCompleted}
-import com.google.inject.name.Named
+import com.google.inject.assistedinject.Assisted
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
 
-class FlipGameActor @Inject()(@Named("merchant-actor") walletRef: ActorRef)
-  extends PersistentActor with ActorLogging {
+object FlipGameActor {
 
-  val props = FlipActorProps("playerA")
+  trait Factory {
+    def apply(props: FlipActorProps, walletRef: ActorRef): Actor
+  }
+
+}
+
+class FlipGameActor @Inject()(@Assisted props: FlipActorProps, @Assisted walletRef: ActorRef)
+  extends PersistentActor with ActorLogging {
 
   private val rng: Rng = Rng.real
 
@@ -22,7 +28,7 @@ class FlipGameActor @Inject()(@Named("merchant-actor") walletRef: ActorRef)
   var events: List[FlipEvent] = List(NewRoundStarted(0, Instant.now()))
 
   override def persistenceId: String = s"flip-${props.playerId}"
-  
+
   override def receiveRecover: Receive = {
     case evt: FlipEvent =>
       updateState(evt)
