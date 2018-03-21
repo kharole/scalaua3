@@ -35,9 +35,9 @@ class FlipGameActor @Inject()(@Named("merchant-actor") walletRef: ActorRef)
     case br: BalanceResponse if clientRef.nonEmpty =>
       clientRef.get ! br
 
-    case cmd: FlipCommand if state.handleCommand(rng, props, Instant.now()).isDefinedAt(cmd) =>
+    case cmd: FlipCommand if state.behaviour.handleCommand(rng, props, Instant.now()).isDefinedAt(cmd) =>
       log.debug(s"processing $cmd command in state: $state")
-      state.handleCommand(rng, props, Instant.now())(cmd) match {
+      state.behaviour.handleCommand(rng, props, Instant.now())(cmd) match {
         case Left(error) =>
           clientRef.get ! error
         case Right(evt) =>
@@ -56,11 +56,7 @@ class FlipGameActor @Inject()(@Named("merchant-actor") walletRef: ActorRef)
   def updateState(event: FlipEvent): Unit = {
     log.debug(s"applying $event to state")
 
-    state = event match {
-      case Attached(session, _) => state.attach(session)
-      case Detached(_) => state.detach()
-      case evt => state.handleEvent(props)(evt)
-    }
+    state = state.behaviour.handleEvent(props)(event)
 
     events = event match {
       case Attached(_, _) | Detached(_) => events

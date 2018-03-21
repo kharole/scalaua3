@@ -159,49 +159,47 @@ case class FlipState(roundId: Int,
 
   def gotoBetsAwaiting(newRoundId: Int): FlipState = copy(status = BetsAwaiting, bet = None, result = None, roundId = newRoundId)
 
-  def handleCommand(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = {
-    val pf1: PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = status match {
-      case BetsAwaiting => BetsAwaitingBehaviour.handleCommand(this)
-      case CollectingBets(_) => CollectingBetsBehaviour.handleCommand(this)
-      case PayingOut(_) => PayingOutBehaviour.handleCommand(this)
-      case RoundFinished => RoundFinishedBehaviour.handleCommand(this)
+  def behaviour: FlipBehaviour = {
+    val baseBehaviour = status match {
+      case BetsAwaiting => BetsAwaitingBehaviour(this)
+      case CollectingBets(_) => CollectingBetsBehaviour(this)
+      case PayingOut(_) => PayingOutBehaviour(this)
+      case RoundFinished => RoundFinishedBehaviour(this)
     }
-    val value: PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = af1(ts)
-    pf1 orElse value
+    val detachBehaviourAspect = AttachDetachBehaviourAspect(this)
+    FallbackFlipBehaviour(baseBehaviour, detachBehaviourAspect)
   }
-
-  def handleEvent(props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = {
-    val pf2 = status match {
-      case BetsAwaiting => BetsAwaitingBehaviour.handleEvent(this)(props)
-      case CollectingBets(_) => CollectingBetsBehaviour.handleEvent(this)(props)
-      case PayingOut(_) => PayingOutBehaviour.handleEvent(this)(props)
-      case RoundFinished => RoundFinishedBehaviour.handleEvent(this)(props)
-    }
-    val value = af2(this, props)
-    pf2 orElse value
-  }
-
-  def af1(implicit ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = {
-    case Attach(s) => Right(Attached(s, ts))
-    case Detach() => Right(Detached(ts))
-  }
-
-  def af2(state: FlipState, props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = {
-    case Attached(newSession, _) => state.attach(newSession)
-    case Detached(_) => state.detach()
-  }
-
 }
 
 //behaviour
 sealed trait FlipBehaviour {
-  def handleCommand(state: FlipState)(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]]
+  def handleCommand(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]]
 
-  def handleEvent(state: FlipState)(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState]
+  def handleEvent(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState]
 }
 
-object BetsAwaitingBehaviour extends FlipBehaviour {
-  override def handleCommand(state: FlipState)(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = {
+case class FallbackFlipBehaviour(a: FlipBehaviour, b: FlipBehaviour) extends FlipBehaviour {
+  override def handleCommand(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] =
+    a.handleCommand orElse b.handleCommand
+
+  override def handleEvent(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState] =
+    a.handleEvent orElse b.handleEvent
+}
+
+case class AttachDetachBehaviourAspect(state: FlipState) extends FlipBehaviour {
+  override def handleCommand(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = {
+    case Attach(s) => Right(Attached(s, ts))
+    case Detach() => Right(Detached(ts))
+  }
+
+  override def handleEvent(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = {
+    case Attached(newSession, _) => state.attach(newSession)
+    case Detached(_) => state.detach()
+  }
+}
+
+case class BetsAwaitingBehaviour(state: FlipState) extends FlipBehaviour {
+  override def handleCommand(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = {
     case FlipCoin(bet, alternative) =>
       if (bet <= 0 || bet > 5) {
         Left(FlipError("error.invalid.bet.value"))
@@ -212,7 +210,7 @@ object BetsAwaitingBehaviour extends FlipBehaviour {
       }
   }
 
-  override def handleEvent(state: FlipState)(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = {
+  override def handleEvent(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = {
     case BetAccepted(amount, alternative, ts) =>
       state
         .placeBet(amount, alternative)
@@ -220,8 +218,8 @@ object BetsAwaitingBehaviour extends FlipBehaviour {
   }
 }
 
-object CollectingBetsBehaviour extends FlipBehaviour {
-  override def handleCommand(state: FlipState)(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = {
+case class CollectingBetsBehaviour(state: FlipState) extends FlipBehaviour {
+  override def handleCommand(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = {
     case wc: WalletConfirmation =>
       val confirmation = state.verify(wc)
       //val result = if (rng.next(2) == 0) "head" else "tail"
@@ -238,7 +236,7 @@ object CollectingBetsBehaviour extends FlipBehaviour {
     case WalletFailure5xx(code) => ???
   }
 
-  override def handleEvent(state: FlipState)(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = {
+  override def handleEvent(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = {
     case BetConfirmed(_, result, _, win, ts) =>
       state
         .gotoPayingOut(result, win, ts)
@@ -249,8 +247,8 @@ object CollectingBetsBehaviour extends FlipBehaviour {
   }
 }
 
-object PayingOutBehaviour extends FlipBehaviour {
-  override def handleCommand(state: FlipState)(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = {
+case class PayingOutBehaviour(state: FlipState) extends FlipBehaviour {
+  override def handleCommand(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = {
     case wc: WalletConfirmation =>
       val confirmation = state.verify(wc)
       Right(WinConfirmed(confirmation, ts))
@@ -260,20 +258,20 @@ object PayingOutBehaviour extends FlipBehaviour {
     case WalletFailure5xx(code) => ???
   }
 
-  override def handleEvent(state: FlipState)(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = {
+  override def handleEvent(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = {
     case WinConfirmed(_, _) =>
       state
         .gotoRoundFinished
   }
 }
 
-object RoundFinishedBehaviour extends FlipBehaviour {
-  override def handleCommand(state: FlipState)(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = {
+case class RoundFinishedBehaviour(state: FlipState) extends FlipBehaviour {
+  override def handleCommand(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = {
     case StartNewRound() =>
       Right(NewRoundStarted(state.roundId + 1, ts))
   }
 
-  override def handleEvent(state: FlipState)(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = {
+  override def handleEvent(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = {
     case NewRoundStarted(newRoundId, _) =>
       state
         .gotoBetsAwaiting(newRoundId)
