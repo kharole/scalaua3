@@ -32,12 +32,6 @@ class FlipGameActor @Inject()(@Named("merchant-actor") walletRef: ActorRef)
   }
 
   override def receiveCommand: Receive = {
-    case Attach(session) =>
-      persistEvent(Attached(session, Instant.now()))
-
-    case Detach() =>
-      persistEvent(Detached(Instant.now()))
-
     case br: BalanceResponse if clientRef.nonEmpty =>
       clientRef.get ! br
 
@@ -53,7 +47,6 @@ class FlipGameActor @Inject()(@Named("merchant-actor") walletRef: ActorRef)
     case unexpected@_ =>
       log.warning(s"unexpected command $unexpected")
       clientRef.get ! FlipError("error.unexpected.command")
-
   }
 
   private def persistEvent(event: FlipEvent): Unit = {

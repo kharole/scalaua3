@@ -14,12 +14,20 @@ case class FlipPlayerSimulator(state: FlipState, props: FlipActorProps) {
     }
   }
 
-  def attach(session: String): FlipPlayerSimulator = {
-    copy(state = state.attach(session))
+  def attach(session: String)(implicit rng: Rng, ts: Instant): Either[FlipError, FlipPlayerSimulator] = {
+    val command = Attach(session)
+    state.handleCommand(rng, props, ts)(command) match {
+      case Right(event) => Right(copy(state = state.handleEvent(props)(event)))
+      case Left(error) => Left(error)
+    }
   }
 
-  def detach(): FlipPlayerSimulator = {
-    copy(state = state.detach())
+  def detach()(implicit rng: Rng, ts: Instant): Either[FlipError, FlipPlayerSimulator] = {
+    val command = Detach()
+    state.handleCommand(rng, props, ts)(command) match {
+      case Right(event) => Right(copy(state = state.handleEvent(props)(event)))
+      case Left(error) => Left(error)
+    }
   }
 
   def flipCoin(bet: Int, alternative: String)(implicit rng: Rng, ts: Instant): Either[FlipError, FlipPlayerSimulator] = {

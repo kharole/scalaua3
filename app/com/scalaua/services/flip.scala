@@ -159,21 +159,37 @@ case class FlipState(roundId: Int,
 
   def gotoBetsAwaiting(newRoundId: Int): FlipState = copy(status = BetsAwaiting, bet = None, result = None, roundId = newRoundId)
 
-  def handleCommand(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] =
-    status match {
+  def handleCommand(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = {
+    val pf1: PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = status match {
       case BetsAwaiting => BetsAwaitingBehaviour.handleCommand(this)
       case CollectingBets(_) => CollectingBetsBehaviour.handleCommand(this)
       case PayingOut(_) => PayingOutBehaviour.handleCommand(this)
       case RoundFinished => RoundFinishedBehaviour.handleCommand(this)
     }
+    val value: PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = af1(ts)
+    pf1 orElse value
+  }
 
-  def handleEvent(props: FlipActorProps): PartialFunction[FlipEvent, FlipState] =
-    status match {
+  def handleEvent(props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = {
+    val pf2 = status match {
       case BetsAwaiting => BetsAwaitingBehaviour.handleEvent(this)(props)
       case CollectingBets(_) => CollectingBetsBehaviour.handleEvent(this)(props)
       case PayingOut(_) => PayingOutBehaviour.handleEvent(this)(props)
       case RoundFinished => RoundFinishedBehaviour.handleEvent(this)(props)
     }
+    val value = af2(this, props)
+    pf2 orElse value
+  }
+
+  def af1(implicit ts: Instant): PartialFunction[FlipCommand, Either[FlipError, FlipEvent]] = {
+    case Attach(s) => Right(Attached(s, ts))
+    case Detach() => Right(Detached(ts))
+  }
+
+  def af2(state: FlipState, props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = {
+    case Attached(newSession, _) => state.attach(newSession)
+    case Detached(_) => state.detach()
+  }
 
 }
 
