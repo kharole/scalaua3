@@ -49,10 +49,11 @@ class FlipGameActor @Inject()(@Assisted props: FlipActorProps, @Assisted walletR
         case Right(evt) =>
           persistEvent(evt)
       }
-
-    case unexpected@_ =>
-      log.warning(s"unexpected command $unexpected")
-      clientRef.get ! FlipError("error.unexpected.command")
+  }
+  
+  override def unhandled(message: Any): Unit = {
+    log.warning(s"unhandled command $message")
+    clientRef.get ! FlipError("error.unhandled.command")
   }
 
   private def persistEvent(event: FlipEvent): Unit = {

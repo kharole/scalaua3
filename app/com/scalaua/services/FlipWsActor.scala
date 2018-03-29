@@ -16,6 +16,10 @@ class FlipWsActor(out: ActorRef, managerRef: ActorRef) extends Actor with ActorL
   override def postStop(): Unit = {
     log.info("ws disconnected")
   }
+  
+  override def unhandled(message: Any): Unit = {
+    log.error(s"unhandled object $message in detached web socket")
+  }
 
   def receive: Receive = detached
 
@@ -25,9 +29,6 @@ class FlipWsActor(out: ActorRef, managerRef: ActorRef) extends Actor with ActorL
     case a: Attached =>
       context.become(attached(sender()))
       toWsOutbounds(a).foreach(out ! _)
-
-    case unexpected@_ =>
-      log.error(s"unexpected object $unexpected in detached web socket")
   }
 
   def attached(gameRef: ActorRef): Receive = {
