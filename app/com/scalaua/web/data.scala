@@ -36,7 +36,7 @@ case class WsShowDisposableMessage(message: String, name: String = "show-disposa
 
 case class WsShowBlockingMessage(message: String, name: String = "show-blocking-message") extends WsOutbound
 
-case class WsHideBlockingMessage(name: String = "hide-blocking-message") extends WsOutbound
+case class WsHideBlockingMessage(message: String, name: String = "hide-disposable-message") extends WsOutbound
 
 //json
 
