@@ -10,7 +10,7 @@ import scala.util.Random
 
 class MerchantActor @Inject()() extends Actor with ActorLogging {
 
-  val rng = Random
+  val rng = new Random()
 
   val initialBalance = 10
   val balances: mutable.Map[String, Int] = mutable.Map()
