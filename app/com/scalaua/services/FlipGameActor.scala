@@ -98,7 +98,7 @@ class FlipGameActor @Inject()(@Assisted props: FlipActorProps, @Assisted walletR
 
     pendingRequest match {
       case Some(p) if !p.undelivered && p.nrOfAttempts < 10 =>
-        val redeliveryInterval = 30.seconds
+        val redeliveryInterval = 10.seconds
         context.system.scheduler.scheduleOnce(redeliveryInterval * p.nrOfAttempts, () => walletRef ! p.walletRequest)
         ()
       case _ =>
