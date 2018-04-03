@@ -67,17 +67,17 @@ class FlipWsActor(out: ActorRef, managerRef: ActorRef) extends Actor with ActorL
       case BetAccepted(amount, alternative, _) =>
         List(WsBetAccepted(amount, alternative), WsStatusUpdated("collecting"))
       case BetConfirmed(confirmation, result, outcome, win, _) =>
-        List(WsFlipped(result, outcome, win), WsBalanceUpdated(confirmation.newBalance), WsStatusUpdated("paying-out"))
+        List(WsHideBlockingMessage(), WsFlipped(result, outcome, win), WsBalanceUpdated(confirmation.newBalance), WsStatusUpdated("paying-out"))
       case BetError(WalletError4xx(code), roundId, _) =>
         List(WsShowDisposableMessage(code), WsNewRoundStarted(roundId), WsStatusUpdated("awaiting"))
       case BetAttemptFailed(_, _) =>
-        List()
+        List(WsShowBlockingMessage("Communication is unstable. Please wait."))
       case WinConfirmed(confirmation, _) =>
-        List(WsBalanceUpdated(confirmation.newBalance), WsStatusUpdated("finished"))
+        List(WsHideBlockingMessage(), WsBalanceUpdated(confirmation.newBalance), WsStatusUpdated("finished"))
       case WinError(_, _) =>
-        List()
+        List(WsShowBlockingMessage("Please contact support."))
       case WinAttemptFailed(_, _) =>
-        List()
+        List(WsShowBlockingMessage("Communication is unstable. Please wait."))
       case NewRoundStarted(roundId, _) =>
         List(WsNewRoundStarted(roundId), WsStatusUpdated("awaiting"))
       case Attached(_, _) =>

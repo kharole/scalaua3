@@ -19,7 +19,9 @@ trait Rng {
 
 //model
 
-case class PendingRequest(walletRequest: WalletRequest, nrOfAttempts: Int = 0, undelivered: Boolean = false)
+case class PendingRequest(walletRequest: WalletRequest, nrOfAttempts: Int = 0, undelivered: Boolean = false) {
+  def incNrOfAttempts: PendingRequest = copy(nrOfAttempts = nrOfAttempts + 1)
+}
 
 case class WalletBalanceRequest(playerId: String, session: String)
 
@@ -121,6 +123,15 @@ case class FlipState(roundId: Int,
                      bet: Option[FlipBet] = None,
                      result: Option[FlipResult] = None,
                      session: Option[String] = None) {
+
+  def incNrOfAttempts(): FlipState = status match {
+    case cb@CollectingBets(p) =>
+      copy(status = cb.copy(pendingRequest = p.incNrOfAttempts))
+    case po@PayingOut(p) =>
+      copy(status = po.copy(pendingRequest = p.incNrOfAttempts))
+    case _ =>
+      throw new IllegalStateException("incNrOfAttempts only allowed in processing states")
+  }
 
   def attach(newSession: String): FlipState = copy(session = Some(newSession))
 
@@ -233,7 +244,8 @@ case class CollectingBetsBehaviour(state: FlipState) extends FlipBehaviour {
     case e: WalletError4xx =>
       Right(BetError(e, state.roundId + 1, ts))
 
-    case WalletFailure5xx(code) => ???
+    case e: WalletFailure5xx =>
+      Right(BetAttemptFailed(e, ts))
   }
 
   override def handleEvent(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = {
@@ -244,6 +256,10 @@ case class CollectingBetsBehaviour(state: FlipState) extends FlipBehaviour {
     case BetError(_, newRoundId, _) =>
       state
         .gotoBetsAwaiting(newRoundId)
+
+    case BetAttemptFailed(_, _) =>
+      state
+        .incNrOfAttempts()
   }
 }
 
@@ -253,15 +269,21 @@ case class PayingOutBehaviour(state: FlipState) extends FlipBehaviour {
       val confirmation = state.verify(wc)
       Right(WinConfirmed(confirmation, ts))
 
-    case WalletError4xx(code) => ???
+    case e: WalletError4xx =>
+      Right(WinError(e, ts))
 
-    case WalletFailure5xx(code) => ???
+    case e: WalletFailure5xx =>
+      Right(WinAttemptFailed(e, ts))
   }
 
   override def handleEvent(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = {
     case WinConfirmed(_, _) =>
       state
         .gotoRoundFinished
+
+    case WinAttemptFailed(_, _) | WinError(_, _) =>
+      state
+        .incNrOfAttempts()
   }
 }
 

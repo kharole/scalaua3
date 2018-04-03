@@ -18,9 +18,11 @@ class FlipControllerSpec extends PlaySpec with WsSpec {
       sendMessage(WsFlipCoin(5, "head"))
       receiveMessage.name mustBe "bet-accepted"
       receiveMessage.name mustBe "status-updated"
+      receiveMessage.name mustBe "hide-blocking-message"
       receiveMessage.name mustBe "flipped"
       receiveMessage.name mustBe "balance-updated"
       receiveMessage.name mustBe "status-updated"
+      receiveMessage.name mustBe "hide-blocking-message"
       receiveMessage.name mustBe "balance-updated"
       receiveMessage.name mustBe "status-updated"
       sendMessage(WsStartNewRound())
@@ -39,9 +41,11 @@ class FlipControllerSpec extends PlaySpec with WsSpec {
       sendMessage(WsFlipCoin(5, "head"))
       receiveMessage.name mustBe "bet-accepted"
       receiveMessage.name mustBe "status-updated"
+      receiveMessage.name mustBe "hide-blocking-message"
       receiveMessage.name mustBe "flipped"
       receiveMessage.name mustBe "balance-updated"
       receiveMessage.name mustBe "status-updated"
+      receiveMessage.name mustBe "hide-blocking-message"
       receiveMessage.name mustBe "balance-updated"
       receiveMessage.name mustBe "status-updated"
       sendMessage(WsDetach())
@@ -53,9 +57,11 @@ class FlipControllerSpec extends PlaySpec with WsSpec {
       receiveMessage.name mustBe "status-updated"
       receiveMessage.name mustBe "bet-accepted"
       receiveMessage.name mustBe "status-updated"
+      receiveMessage.name mustBe "hide-blocking-message"
       receiveMessage.name mustBe "flipped"
       receiveMessage.name mustBe "balance-updated"
       receiveMessage.name mustBe "status-updated"
+      receiveMessage.name mustBe "hide-blocking-message"
       receiveMessage.name mustBe "balance-updated"
       receiveMessage.name mustBe "status-updated"
       receiveMessage.name mustBe "balance-updated"
