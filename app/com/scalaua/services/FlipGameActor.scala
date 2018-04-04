@@ -47,7 +47,7 @@ class FlipGameActor @Inject()(@Assisted props: FlipActorProps, @Assisted walletR
         case Left(error) =>
           clientRef.get ! error
         case Right(evt) =>
-          persistEvent(evt)
+          persistEvent(evt.head)
       }
   }
   
