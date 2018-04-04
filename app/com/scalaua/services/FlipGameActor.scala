@@ -54,8 +54,8 @@ class FlipGameActor @Inject()(@Assisted props: FlipActorProps, @Assisted walletR
   }
   
   override def unhandled(message: Any): Unit = {
-    log.warning(s"unhandled command $message")
-    clientRef.get ! FlipError("error.unhandled.command")
+    log.warning(s"unhandled command $message in state $state")
+    clientRef.get ! FlipError("unhandled command")
   }
 
   private def persistEvents(evts: immutable.Seq[FlipEvent]): Unit = {

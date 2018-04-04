@@ -16,7 +16,7 @@ class FlipWsActor(out: ActorRef, managerRef: ActorRef) extends Actor with ActorL
   override def postStop(): Unit = {
     log.info("ws disconnected")
   }
-  
+
   override def unhandled(message: Any): Unit = {
     log.error(s"unhandled object $message in detached web socket")
   }
@@ -68,8 +68,8 @@ class FlipWsActor(out: ActorRef, managerRef: ActorRef) extends Actor with ActorL
         List(WsBetAccepted(amount, alternative), WsStatusUpdated("collecting"))
       case BetConfirmed(confirmation, result, outcome, win, _) =>
         List(WsHideBlockingMessage(), WsFlipped(result, outcome, win), WsBalanceUpdated(confirmation.newBalance), WsStatusUpdated("paying-out"))
-      case BetError(WalletError4xx(msg), roundId, _) =>
-        List(WsShowDisposableMessage(msg), WsNewRoundStarted(roundId), WsStatusUpdated("awaiting"))
+      case BetError(WalletError4xx(msg), _) =>
+        List(WsShowDisposableMessage(msg))
       case BetAttemptFailed(_, _) =>
         List(WsShowBlockingMessage("your balance is temporary unavailable"))
       case WinConfirmed(confirmation, _) =>

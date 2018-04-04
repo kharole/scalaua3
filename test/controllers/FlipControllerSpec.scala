@@ -4,8 +4,7 @@ import com.scalaua.web._
 import org.scalatestplus.play._
 
 class FlipControllerSpec extends PlaySpec with WsSpec {
-
-  //TODO: send start-new-round on validation error
+  
   "FlipController" should {
     "attach flip and detach" in {
       sendMessage(WsAttach("AAA"))

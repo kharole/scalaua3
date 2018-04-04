@@ -39,7 +39,7 @@ case class FlipPlayerSimulator(state: FlipState, props: FlipActorProps) {
 
   private def validateAndApply(rng: Rng, ts: Instant, command: FlipCommand): Either[FlipError, FlipPlayerSimulator] = {
     state.behaviour.validateCommand(rng, props, ts)(command) match {
-      case Right(event) => Right(copy(state = state.behaviour.handleEvent(props)(event.head)))
+      case Right(evts) => Right(copy(state = evts.foldLeft(state)((s, e) => s.behaviour.handleEvent(props)(e))))
       case Left(error) => Left(error)
     }
   }
