@@ -77,7 +77,7 @@ class FlipControllerSpec extends PlaySpec with WsSpec {
       receiveMessage.name mustBe "status-updated"
       receiveMessage.name mustBe "balance-updated"
       sendMessage(WsFlipCoin(-5, "head"))
-      receiveMessage mustBe WsShowDisposableMessage("error.invalid.bet.value")
+      receiveMessage mustBe WsShowDisposableMessage("invalid bet value")
       sendMessage(WsDetach())
       receiveMessage.name mustBe "detached"
     }

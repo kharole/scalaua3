@@ -2,6 +2,7 @@ package com.scalaua.services
 
 import java.time.Instant
 
+import scala.collection.immutable
 import scala.util.{Random, Right}
 
 
@@ -184,13 +185,13 @@ case class FlipState(roundId: Int,
 
 //behaviour
 sealed trait FlipBehaviour {
-  def validateCommand(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, Iterable[FlipEvent]]]
+  def validateCommand(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, immutable.Seq[FlipEvent]]]
 
   def handleEvent(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState]
 }
 
 case class FallbackFlipBehaviour(a: FlipBehaviour, b: FlipBehaviour) extends FlipBehaviour {
-  override def validateCommand(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, Iterable[FlipEvent]]] =
+  override def validateCommand(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, immutable.Seq[FlipEvent]]] =
     a.validateCommand orElse b.validateCommand
 
   override def handleEvent(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState] =
@@ -198,7 +199,7 @@ case class FallbackFlipBehaviour(a: FlipBehaviour, b: FlipBehaviour) extends Fli
 }
 
 case class AttachDetachBehaviourAspect(state: FlipState) extends FlipBehaviour {
-  override def validateCommand(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, Iterable[FlipEvent]]] = {
+  override def validateCommand(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, immutable.Seq[FlipEvent]]] = {
     case Attach(s) => Right(List(Attached(s, ts)))
     case Detach() => Right(List(Detached(ts)))
   }
@@ -210,7 +211,7 @@ case class AttachDetachBehaviourAspect(state: FlipState) extends FlipBehaviour {
 }
 
 case class BetsAwaitingBehaviour(state: FlipState) extends FlipBehaviour {
-  override def validateCommand(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, Iterable[FlipEvent]]] = {
+  override def validateCommand(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, immutable.Seq[FlipEvent]]] = {
     case FlipCoin(bet, alternative) =>
       if (bet <= 0 || bet > 5) {
         Left(FlipError("invalid bet value"))
@@ -230,7 +231,7 @@ case class BetsAwaitingBehaviour(state: FlipState) extends FlipBehaviour {
 }
 
 case class CollectingBetsBehaviour(state: FlipState) extends FlipBehaviour {
-  override def validateCommand(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, Iterable[FlipEvent]]] = {
+  override def validateCommand(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, immutable.Seq[FlipEvent]]] = {
     case wc: WalletConfirmation =>
       val confirmation = state.verify(wc)
       //val result = if (rng.next(2) == 0) "head" else "tail"
@@ -264,7 +265,7 @@ case class CollectingBetsBehaviour(state: FlipState) extends FlipBehaviour {
 }
 
 case class PayingOutBehaviour(state: FlipState) extends FlipBehaviour {
-  override def validateCommand(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, Iterable[FlipEvent]]] = {
+  override def validateCommand(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, immutable.Seq[FlipEvent]]] = {
     case wc: WalletConfirmation =>
       val confirmation = state.verify(wc)
       Right(List(WinConfirmed(confirmation, ts)))
@@ -288,7 +289,7 @@ case class PayingOutBehaviour(state: FlipState) extends FlipBehaviour {
 }
 
 case class RoundFinishedBehaviour(state: FlipState) extends FlipBehaviour {
-  override def validateCommand(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, Iterable[FlipEvent]]] = {
+  override def validateCommand(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, immutable.Seq[FlipEvent]]] = {
     case StartNewRound() =>
       Right(List(NewRoundStarted(state.roundId + 1, ts)))
   }

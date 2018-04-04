@@ -1,12 +1,13 @@
 package com.scalaua.services
 
 import java.time.Instant
-import javax.inject.Inject
 
+import javax.inject.Inject
 import akka.actor.{Actor, ActorLogging, ActorRef}
 import akka.persistence.{PersistentActor, RecoveryCompleted}
 import com.google.inject.assistedinject.Assisted
 
+import scala.collection.immutable
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
 
@@ -41,13 +42,14 @@ class FlipGameActor @Inject()(@Assisted props: FlipActorProps, @Assisted walletR
     case br: BalanceResponse if clientRef.nonEmpty =>
       clientRef.get ! br
 
+    //todo: pf orElse
     case cmd: FlipCommand if state.behaviour.validateCommand(rng, props, Instant.now()).isDefinedAt(cmd) =>
       log.debug(s"processing $cmd command in state: $state")
       state.behaviour.validateCommand(rng, props, Instant.now())(cmd) match {
         case Left(error) =>
           clientRef.get ! error
-        case Right(evt) =>
-          persistEvent(evt.head)
+        case Right(evts) =>
+          persistEvents(evts)
       }
   }
   
@@ -56,8 +58,8 @@ class FlipGameActor @Inject()(@Assisted props: FlipActorProps, @Assisted walletR
     clientRef.get ! FlipError("error.unhandled.command")
   }
 
-  private def persistEvent(event: FlipEvent): Unit = {
-    persist(event)(updateState)
+  private def persistEvents(evts: immutable.Seq[FlipEvent]): Unit = {
+    persistAll(evts)(updateState)
   }
 
   def updateState(event: FlipEvent): Unit = {
@@ -96,6 +98,7 @@ class FlipGameActor @Inject()(@Assisted props: FlipActorProps, @Assisted walletR
   private def sendToWallet(pendingRequest: Option[PendingRequest]): Unit = {
     implicit val ec: ExecutionContextExecutor = context.dispatcher
 
+    //todo: timers
     pendingRequest match {
       case Some(p) if !p.undelivered && p.nrOfAttempts < 10 =>
         val redeliveryInterval = 10.seconds
