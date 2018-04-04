@@ -36,7 +36,7 @@ class MerchantActor @Inject()() extends Actor with ActorLogging {
                 confirmations(id) = confirmation
                 tryToSend(confirmation, playerId)
               } else {
-                sender() ! WalletError4xx("error.not-enough-credits")
+                sender() ! WalletError4xx("not enough credits")
               }
           }
 
@@ -56,7 +56,7 @@ class MerchantActor @Inject()() extends Actor with ActorLogging {
 
   private def tryToSend(confirmation: WalletConfirmation, playerId: String): Unit = {
     if (failure(playerId)) {
-      sender() ! WalletFailure5xx("failure.unexpected")
+      sender() ! WalletFailure5xx("null pointer exception")
     } else {
       sender() ! confirmation
     }

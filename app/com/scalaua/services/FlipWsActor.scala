@@ -41,8 +41,8 @@ class FlipWsActor(out: ActorRef, managerRef: ActorRef) extends Actor with ActorL
     case BalanceResponse(balance) =>
       out ! WsBalanceUpdated(balance)
 
-    case FlipError(code) =>
-      out ! WsShowDisposableMessage(code)
+    case FlipError(msg) =>
+      out ! WsShowDisposableMessage(msg)
 
     case unexpected@_ =>
       log.error(s"unexpected object $unexpected in attached web socket")
@@ -68,16 +68,16 @@ class FlipWsActor(out: ActorRef, managerRef: ActorRef) extends Actor with ActorL
         List(WsBetAccepted(amount, alternative), WsStatusUpdated("collecting"))
       case BetConfirmed(confirmation, result, outcome, win, _) =>
         List(WsHideBlockingMessage(), WsFlipped(result, outcome, win), WsBalanceUpdated(confirmation.newBalance), WsStatusUpdated("paying-out"))
-      case BetError(WalletError4xx(code), roundId, _) =>
-        List(WsShowDisposableMessage(code), WsNewRoundStarted(roundId), WsStatusUpdated("awaiting"))
+      case BetError(WalletError4xx(msg), roundId, _) =>
+        List(WsShowDisposableMessage(msg), WsNewRoundStarted(roundId), WsStatusUpdated("awaiting"))
       case BetAttemptFailed(_, _) =>
-        List(WsShowBlockingMessage("Communication is unstable. Please wait."))
+        List(WsShowBlockingMessage("your balance is temporary unavailable"))
       case WinConfirmed(confirmation, _) =>
         List(WsHideBlockingMessage(), WsBalanceUpdated(confirmation.newBalance), WsStatusUpdated("finished"))
       case WinError(_, _) =>
-        List(WsShowBlockingMessage("Please contact support."))
+        List(WsShowBlockingMessage("please contact support"))
       case WinAttemptFailed(_, _) =>
-        List(WsShowBlockingMessage("Communication is unstable. Please wait."))
+        List(WsShowBlockingMessage("your balance is temporary unavailable"))
       case NewRoundStarted(roundId, _) =>
         List(WsNewRoundStarted(roundId), WsStatusUpdated("awaiting"))
       case Attached(_, _) =>

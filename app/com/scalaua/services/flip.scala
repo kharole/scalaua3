@@ -39,9 +39,9 @@ case class BalanceResponse(balance: Int)
 
 case class WalletConfirmation(id: String, amount: Int, newBalance: Int, processedAt: Instant) extends WalletResponse
 
-case class WalletError4xx(code: String) extends WalletResponse
+case class WalletError4xx(message: String) extends WalletResponse
 
-case class WalletFailure5xx(code: String) extends WalletResponse
+case class WalletFailure5xx(message: String) extends WalletResponse
 
 case class Attach(session: String) extends FlipCommand
 
