@@ -41,9 +41,9 @@ class FlipGameActor @Inject()(@Assisted props: FlipActorProps, @Assisted walletR
     case br: BalanceResponse if clientRef.nonEmpty =>
       clientRef.get ! br
 
-    case cmd: FlipCommand if state.behaviour.handleCommand(rng, props, Instant.now()).isDefinedAt(cmd) =>
+    case cmd: FlipCommand if state.behaviour.validateCommand(rng, props, Instant.now()).isDefinedAt(cmd) =>
       log.debug(s"processing $cmd command in state: $state")
-      state.behaviour.handleCommand(rng, props, Instant.now())(cmd) match {
+      state.behaviour.validateCommand(rng, props, Instant.now())(cmd) match {
         case Left(error) =>
           clientRef.get ! error
         case Right(evt) =>

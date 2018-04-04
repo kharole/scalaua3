@@ -12,7 +12,7 @@ class FlipStateSpec extends FlatSpec with Matchers {
 
     var simulator = FlipPlayerSimulator(FlipState.initial, FlipActorProps("playerA"))
 
-    simulator = simulator.attach("AAA").right.get
+    simulator = simulator.attach("AAA")
     simulator.state.session shouldBe Some("AAA")
 
     simulator.status shouldBe "BetsAwaiting"
@@ -33,7 +33,7 @@ class FlipStateSpec extends FlatSpec with Matchers {
     simulator.state.bet shouldBe None
     simulator.state.result shouldBe None
 
-    simulator = simulator.detach().right.get
+    simulator = simulator.detach()
   }
 
   it should "start new round on wallet error" in {
@@ -42,7 +42,7 @@ class FlipStateSpec extends FlatSpec with Matchers {
 
     var simulator = FlipPlayerSimulator(FlipState.initial, FlipActorProps("playerA"))
 
-    simulator = simulator.attach("AAA").right.get
+    simulator = simulator.attach("AAA")
 
     simulator.status shouldBe "BetsAwaiting"
     simulator.state.roundId shouldBe 0
@@ -55,6 +55,6 @@ class FlipStateSpec extends FlatSpec with Matchers {
     simulator.status shouldBe "BetsAwaiting"
     simulator.state.roundId shouldBe 1
 
-    simulator = simulator.detach().right.get
+    simulator = simulator.detach()
   }
 }
