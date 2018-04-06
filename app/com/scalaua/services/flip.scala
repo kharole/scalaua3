@@ -240,8 +240,7 @@ case class CollectingBetsBehaviour(state: FlipState) extends FlipBehaviour {
   override def validateCommand(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, immutable.Seq[FlipEvent]]] = {
     case wc: WalletConfirmation =>
       val confirmation = state.verify(wc)
-      //val result = if (rng.next(2) == 0) "head" else "tail"
-      val result = "head"
+      val result = if (rng.next(2) == 0) "head" else "tail"
       val (outcome, win) = if (result == state.bet.get.alternative)
         ("win", state.bet.get.amount * 2)
       else
