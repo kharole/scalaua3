@@ -28,6 +28,14 @@ class FlipGameActor @Inject()(@Assisted props: FlipActorProps, @Assisted walletR
   var state: FlipState = FlipState.initial
   var events: List[FlipEvent] = List(NewRoundStarted(0, Instant.now()))
 
+  override def preStart(): Unit = {
+    log.info("game actor start")
+  }
+
+  override def postStop(): Unit = {
+    log.info("game actor stop")
+  }
+
   override def persistenceId: String = s"flip-${props.playerId}"
 
   override def receiveRecover: Receive = {

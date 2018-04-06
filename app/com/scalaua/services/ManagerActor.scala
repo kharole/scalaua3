@@ -14,6 +14,14 @@ class ManagerActor @Inject()(factory: FlipGameActor.Factory, @Named("merchant-ac
 
   val playerToGame: mutable.Map[String, ActorRef] = mutable.Map()
 
+  override def preStart(): Unit = {
+    log.info("manager actor start")
+  }
+
+  override def postStop(): Unit = {
+    log.info("manager actor stop")
+  }
+
   override def receive: Receive = {
     case attach@Attach(session) =>
       val playerId = session.split("-")(0)

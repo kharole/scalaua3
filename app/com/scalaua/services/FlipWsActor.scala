@@ -29,6 +29,8 @@ class FlipWsActor(out: ActorRef, managerRef: ActorRef) extends Actor with ActorL
     case a: Attached =>
       context.become(attached(sender()))
       toWsOutbounds(a).foreach(out ! _)
+
+      //todo: add detach handling
   }
 
   def attached(gameRef: ActorRef): Receive = {

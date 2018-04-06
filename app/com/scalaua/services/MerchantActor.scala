@@ -4,6 +4,7 @@ import java.time.Instant
 
 import akka.actor.{Actor, ActorLogging}
 import javax.inject.Inject
+import play.api.Logger
 
 import scala.collection.mutable
 import scala.util.Random
@@ -16,6 +17,13 @@ class MerchantActor @Inject()() extends Actor with ActorLogging {
   val balances: mutable.Map[String, Int] = mutable.Map()
   val confirmations: mutable.Map[String, WalletConfirmation] = mutable.Map()
 
+  override def preStart(): Unit = {
+    log.info("merchant actor start")
+  }
+
+  override def postStop(): Unit = {
+    log.info("merchant actor stop")
+  }
 
   override def receive: Receive = {
     case WalletBalanceRequest(playerId, _) =>
