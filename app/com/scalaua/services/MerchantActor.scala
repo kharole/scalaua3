@@ -19,12 +19,14 @@ class MerchantActor @Inject()() extends Actor with ActorLogging {
 
   override def receive: Receive = {
     case WalletBalanceRequest(playerId, _) =>
+      log.info(s"balance wallet request $playerId")
       balances.getOrElseUpdate(playerId, initialBalance)
       sender() ! BalanceResponse(balances(playerId))
 
     case WalletRequest(id, requestType, amount, _, playerId, _) =>
       requestType match {
         case "BET" =>
+          log.info(s"bet wallet $id request from $playerId for $amount")
           confirmations.get(id) match {
             case Some(confirmation) =>
               tryToSend(confirmation, playerId)
@@ -41,6 +43,7 @@ class MerchantActor @Inject()() extends Actor with ActorLogging {
           }
 
         case "WIN" =>
+          log.info(s"win wallet $id request from $playerId for $amount")
           confirmations.get(id) match {
             case Some(confirmation) =>
               tryToSend(confirmation, playerId)

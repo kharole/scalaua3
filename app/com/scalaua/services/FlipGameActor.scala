@@ -2,10 +2,10 @@ package com.scalaua.services
 
 import java.time.Instant
 
-import javax.inject.Inject
-import akka.actor.{Actor, ActorLogging, ActorRef}
+import akka.actor.{Actor, ActorLogging, ActorRef, Timers}
 import akka.persistence.{PersistentActor, RecoveryCompleted}
 import com.google.inject.assistedinject.Assisted
+import javax.inject.Inject
 
 import scala.collection.immutable
 import scala.concurrent.ExecutionContextExecutor
@@ -20,7 +20,7 @@ object FlipGameActor {
 }
 
 class FlipGameActor @Inject()(@Assisted props: FlipActorProps, @Assisted walletRef: ActorRef)
-  extends PersistentActor with ActorLogging {
+  extends Timers with PersistentActor with ActorLogging {
 
   private val rng: Rng = Rng.real
 
@@ -42,6 +42,10 @@ class FlipGameActor @Inject()(@Assisted props: FlipActorProps, @Assisted walletR
     case br: BalanceResponse if clientRef.nonEmpty =>
       clientRef.get ! br
 
+    case wr: WalletRequest =>
+      walletRef ! wr
+      log.info(s"request $wr sent to wallet")
+      
     //todo: pf orElse
     case cmd: FlipCommand if state.behaviour.validateCommand(rng, props, Instant.now()).isDefinedAt(cmd) =>
       log.debug(s"processing $cmd command in state: $state")
@@ -52,10 +56,9 @@ class FlipGameActor @Inject()(@Assisted props: FlipActorProps, @Assisted walletR
           persistEvents(evts)
       }
   }
-  
+
   override def unhandled(message: Any): Unit = {
     log.warning(s"unhandled command $message in state $state")
-    clientRef.get ! FlipError("unhandled command")
   }
 
   private def persistEvents(evts: immutable.Seq[FlipEvent]): Unit = {
@@ -63,9 +66,11 @@ class FlipGameActor @Inject()(@Assisted props: FlipActorProps, @Assisted walletR
   }
 
   def updateState(event: FlipEvent): Unit = {
-    log.debug(s"applying $event to state")
+    log.info(s"applying $event to state")
 
     state = state.behaviour.handleEvent(props)(event)
+
+    log.info(s"new state is $state")
 
     events = event match {
       case Attached(_, _) | Detached(_) => events
@@ -75,6 +80,7 @@ class FlipGameActor @Inject()(@Assisted props: FlipActorProps, @Assisted walletR
 
     if (recoveryFinished) {
       sendToClient(event)
+      //todo: don't resend wallet request on attach detach
       sendToWallet(state.pendingRequest)
     }
   }
@@ -97,12 +103,11 @@ class FlipGameActor @Inject()(@Assisted props: FlipActorProps, @Assisted walletR
 
   private def sendToWallet(pendingRequest: Option[PendingRequest]): Unit = {
     implicit val ec: ExecutionContextExecutor = context.dispatcher
-
-    //todo: timers
     pendingRequest match {
       case Some(p) if !p.undelivered && p.nrOfAttempts < 10 =>
-        val redeliveryInterval = 10.seconds
-        context.system.scheduler.scheduleOnce(redeliveryInterval * p.nrOfAttempts, () => walletRef ! p.walletRequest)
+        val delay = 10.seconds * p.nrOfAttempts
+        timers.startSingleTimer("wallet-timer", p.walletRequest, delay)
+        log.info(s"wallet request ${p.walletRequest} scheduled in $delay")
         ()
       case _ =>
         ()
