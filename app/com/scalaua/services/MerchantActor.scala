@@ -4,7 +4,6 @@ import java.time.Instant
 
 import akka.actor.{Actor, ActorLogging}
 import javax.inject.Inject
-import play.api.Logger
 
 import scala.collection.mutable
 import scala.util.Random

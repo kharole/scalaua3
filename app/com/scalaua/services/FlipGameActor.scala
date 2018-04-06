@@ -54,7 +54,6 @@ class FlipGameActor @Inject()(@Assisted props: FlipActorProps, @Assisted walletR
       walletRef ! wr
       log.info(s"request $wr sent to wallet")
       
-    //todo: pf orElse
     case cmd: FlipCommand if state.behaviour.validateCommand(rng, props, Instant.now()).isDefinedAt(cmd) =>
       log.debug(s"processing $cmd command in state: $state")
       state.behaviour.validateCommand(rng, props, Instant.now())(cmd) match {
@@ -88,7 +87,6 @@ class FlipGameActor @Inject()(@Assisted props: FlipActorProps, @Assisted walletR
 
     if (recoveryFinished) {
       sendToClient(event)
-      //todo: don't resend wallet request on attach detach
       sendToWallet(state.pendingRequest)
     }
   }
