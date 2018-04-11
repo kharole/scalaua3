@@ -69,7 +69,7 @@ class FlipWsActor(out: ActorRef, managerRef: ActorRef) extends Actor with ActorL
       case BetAccepted(amount, alternative, _) =>
         List(WsBetAccepted(amount, alternative), WsStatusUpdated("collecting"))
       case BetConfirmed(confirmation, result, outcome, win, _) =>
-        List(WsHideBlockingMessage(), WsFlipped(result, outcome, win), WsBalanceUpdated(confirmation.newBalance), WsStatusUpdated("paying-out"))
+        List(WsHideBlockingMessage(), WsBalanceUpdated(confirmation.newBalance), WsFlipped(result, outcome, win), WsStatusUpdated("paying-out"))
       case BetError(WalletError4xx(msg), _) =>
         List(WsShowDisposableMessage(msg))
       case BetAttemptFailed(_, _) =>
