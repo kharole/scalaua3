@@ -20,7 +20,7 @@ trait Rng {
 
 //model
 
-case class PendingRequest(walletRequest: WalletRequest, nrOfAttempts: Int = 0, undelivered: Boolean = false) {
+case class PendingRequest(walletRequest: WalletRequest, nrOfAttempts: Int = 0) {
   def incNrOfAttempts: PendingRequest = copy(nrOfAttempts = nrOfAttempts + 1)
 }
 
