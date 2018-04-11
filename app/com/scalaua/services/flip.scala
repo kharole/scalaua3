@@ -80,7 +80,9 @@ trait ConfirmationEvent {
 
 case class BetAccepted(amount: Int, alternative: String, timestamp: Instant) extends FlipEvent
 
-case class BetConfirmed(confirmation: WalletConfirmation, result: String, outcome: String, win: Int, timestamp: Instant) extends FlipEvent with ConfirmationEvent
+case class BetConfirmed(confirmation: WalletConfirmation, timestamp: Instant) extends FlipEvent with ConfirmationEvent
+
+case class CoinFlipped(result: String, outcome: String, win: Int, timestamp: Instant) extends FlipEvent
 
 case class BetError(reason: WalletError4xx, timestamp: Instant) extends FlipEvent with FlipWalletError
 
@@ -229,7 +231,7 @@ case class BetsAwaitingBehaviour(state: FlipState) extends FlipBehaviour {
       state
         .placeBet(amount, alternative)
         .gotoCollectingBets(ts)
-      
+
     case NewRoundStarted(newRoundId, _) =>
       state.newRound(newRoundId)
 
@@ -245,7 +247,7 @@ case class CollectingBetsBehaviour(state: FlipState) extends FlipBehaviour {
         ("win", state.bet.get.amount * 2)
       else
         ("loss", 0)
-      Right(List(BetConfirmed(confirmation, result, outcome, win, ts)))
+      Right(List(BetConfirmed(confirmation, ts), CoinFlipped(result, outcome, win, ts)))
 
     case e: WalletError4xx =>
       Right(List(BetError(e, ts), NewRoundStarted(state.roundId + 1, ts)))
@@ -255,7 +257,10 @@ case class CollectingBetsBehaviour(state: FlipState) extends FlipBehaviour {
   }
 
   override def handleEvent(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = {
-    case BetConfirmed(_, result, _, win, ts) =>
+    case BetConfirmed(_, _) =>
+      state
+
+    case CoinFlipped(result, _, win, ts) =>
       state.gotoPayingOut(result, win, ts)
 
     case BetError(_, _) =>
