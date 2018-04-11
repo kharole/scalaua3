@@ -110,7 +110,7 @@ class FlipGameActor @Inject()(@Assisted props: FlipActorProps, @Assisted walletR
   private def sendToWallet(pendingRequest: Option[PendingRequest]): Unit = {
     implicit val ec: ExecutionContextExecutor = context.dispatcher
     pendingRequest match {
-      case Some(p) if !p.undelivered && p.nrOfAttempts < 10 =>
+      case Some(p) if p.nrOfAttempts < 10 =>
         val delay = 10.seconds * p.nrOfAttempts
         timers.startSingleTimer("wallet-timer", p.walletRequest, delay)
         log.info(s"wallet request ${p.walletRequest} scheduled in $delay")
