@@ -102,6 +102,8 @@ case object BetsAwaiting extends FlipStatus
 
 case class CollectingBets(pendingRequest: PendingRequest) extends FlipStatus
 
+case object Calculating extends FlipStatus
+
 case class PayingOut(pendingRequest: PendingRequest) extends FlipStatus
 
 case object RoundFinished extends FlipStatus
@@ -145,10 +147,9 @@ case class FlipState(roundId: Int,
   }
 
   def pendingRequest: Option[PendingRequest] = status match {
-    case BetsAwaiting => None
     case CollectingBets(p) => Some(p)
     case PayingOut(p) => Some(p)
-    case RoundFinished => None
+    case _ => None
   }
 
   def placeBet(amount: Int, alternative: String): FlipState =
@@ -168,12 +169,15 @@ case class FlipState(roundId: Int,
 
   def gotoBetsAwaiting(): FlipState = copy(status = BetsAwaiting, bet = None, result = None)
 
+  def gotoCalculating(): FlipState = copy(status = Calculating, bet = None, result = None)
+
   def newRound(newRoundId: Int): FlipState = copy(roundId = newRoundId)
 
   def behaviour: FlipBehaviour = {
     val baseBehaviour = status match {
       case BetsAwaiting => BetsAwaitingBehaviour(this)
       case CollectingBets(_) => CollectingBetsBehaviour(this)
+      case Calculating => CalculatingBehaviour(this)
       case PayingOut(_) => PayingOutBehaviour(this)
       case RoundFinished => RoundFinishedBehaviour(this)
     }
@@ -253,16 +257,22 @@ case class CollectingBetsBehaviour(state: FlipState) extends FlipBehaviour {
 
   override def handleEvent(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = {
     case BetConfirmed(_, _) =>
-      state
-
-    case CoinFlipped(result, _, win, ts) =>
-      state.gotoPayingOut(result, win, ts)
+      state.gotoCalculating()
 
     case BetError(_, _) =>
       state.gotoBetsAwaiting()
 
     case BetAttemptFailed(_, _, _) =>
       state.incNrOfAttempts()
+  }
+}
+
+case class CalculatingBehaviour(state: FlipState) extends FlipBehaviour {
+  override def validateCommand(implicit rng: Rng, props: FlipActorProps, ts: Instant): PartialFunction[FlipCommand, Either[FlipError, immutable.Seq[FlipEvent]]] = PartialFunction.empty
+
+  override def handleEvent(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = {
+    case CoinFlipped(result, _, win, ts) =>
+      state.gotoPayingOut(result, win, ts)
   }
 }
 
