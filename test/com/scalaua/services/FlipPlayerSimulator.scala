@@ -48,6 +48,7 @@ case class FlipPlayerSimulator(state: FlipState, props: FlipActorProps) {
     case BetsAwaiting => "BetsAwaiting"
     case CollectingBets(_) => "CollectingBets"
     case PayingOut(_) => "PayingOut"
+    case Calculating => "Calculating"
     case RoundFinished => "RoundFinished"
   }
 }
