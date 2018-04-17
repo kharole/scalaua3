@@ -51,7 +51,7 @@ class FlipStateSpec extends FlatSpec with Matchers {
     simulator.state.bet shouldBe Some(FlipBet(3, "head"))
     simulator.status shouldBe "CollectingBets"
 
-    simulator = simulator.error("not enough credits")
+    simulator = simulator.error("Not enough credits.")
     simulator.status shouldBe "BetsAwaiting"
     simulator.state.roundId shouldBe 1
 

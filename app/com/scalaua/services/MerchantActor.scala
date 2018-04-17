@@ -27,7 +27,10 @@ class MerchantActor @Inject()() extends Actor with ActorLogging {
   override def receive: Receive = {
     case WalletBalanceRequest(playerId, _) =>
       log.info(s"balance wallet request $playerId")
-      balances.getOrElseUpdate(playerId, initialBalance)
+      if (playerId.startsWith("JJJ"))
+        balances.getOrElseUpdate(playerId, 2)
+      else
+        balances.getOrElseUpdate(playerId, initialBalance)
       sender() ! BalanceResponse(balances(playerId))
 
     case WalletRequest(id, requestType, amount, _, playerId, _) =>
@@ -45,7 +48,7 @@ class MerchantActor @Inject()() extends Actor with ActorLogging {
                 confirmations(id) = confirmation
                 tryToSend(confirmation, playerId)
               } else {
-                sender() ! WalletError4xx("not enough credits")
+                sender() ! WalletError4xx("Not enough credits.")
               }
           }
 
