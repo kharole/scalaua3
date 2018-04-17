@@ -14,8 +14,8 @@ class FlipStateSpec extends FlatSpec with Matchers {
 
     simulator = simulator.attach("AAA")
     simulator.state.session shouldBe Some("AAA")
-
     simulator.status shouldBe "BetsAwaiting"
+
     simulator = simulator.flipCoin(3, "head").right.get
     simulator.state.bet shouldBe Some(FlipBet(3, "head"))
     simulator.status shouldBe "CollectingBets"

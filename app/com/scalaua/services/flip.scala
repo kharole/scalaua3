@@ -44,27 +44,22 @@ case class WalletError4xx(message: String) extends WalletResponse
 
 case class WalletFailure5xx(message: String) extends WalletResponse
 
-case class Attach(session: String) extends FlipCommand
+sealed trait UiCommand extends FlipCommand
 
-case class Detach() extends FlipCommand
+case class Attach(session: String) extends FlipCommand with UiCommand
 
-case class FlipCoin(bet: Int, alternative: String) extends FlipCommand
+case class Detach() extends FlipCommand with UiCommand
 
-case class StartNewRound() extends FlipCommand
+case class FlipCoin(bet: Int, alternative: String) extends FlipCommand with UiCommand
+
+case class StartNewRound() extends FlipCommand with UiCommand
 
 //events
 trait Event {
   val timestamp: Instant
 }
 
-sealed trait FlipEvent extends Event {
-  def newBalance: Option[Int] = this match {
-    case rc: ConfirmationEvent =>
-      Some(rc.confirmation.newBalance)
-    case _ =>
-      None
-  }
-}
+sealed trait FlipEvent extends Event
 
 trait FlipWalletError {
   val reason: WalletError4xx
@@ -82,17 +77,17 @@ case class BetAccepted(amount: Int, alternative: String, timestamp: Instant) ext
 
 case class BetConfirmed(confirmation: WalletConfirmation, timestamp: Instant) extends FlipEvent with ConfirmationEvent
 
-case class CoinFlipped(result: String, outcome: String, win: Int, timestamp: Instant) extends FlipEvent
-
 case class BetError(reason: WalletError4xx, timestamp: Instant) extends FlipEvent with FlipWalletError
 
-case class BetAttemptFailed(reason: WalletFailure5xx, timestamp: Instant) extends FlipEvent with FlipAttemptFailed
+case class BetAttemptFailed(reason: WalletFailure5xx, nr: Int, timestamp: Instant) extends FlipEvent with FlipAttemptFailed
+
+case class CoinFlipped(result: String, outcome: String, win: Int, timestamp: Instant) extends FlipEvent
 
 case class WinConfirmed(confirmation: WalletConfirmation, timestamp: Instant) extends FlipEvent with ConfirmationEvent
 
 case class WinError(reason: WalletError4xx, timestamp: Instant) extends FlipEvent with FlipWalletError
 
-case class WinAttemptFailed(reason: WalletFailure5xx, timestamp: Instant) extends FlipEvent with FlipAttemptFailed
+case class WinAttemptFailed(reason: WalletFailure5xx, nr: Int, timestamp: Instant) extends FlipEvent with FlipAttemptFailed
 
 case class NewRoundStarted(roundId: Int, timestamp: Instant) extends FlipEvent
 
@@ -253,7 +248,7 @@ case class CollectingBetsBehaviour(state: FlipState) extends FlipBehaviour {
       Right(List(BetError(e, ts), NewRoundStarted(state.roundId + 1, ts)))
 
     case e: WalletFailure5xx =>
-      Right(List(BetAttemptFailed(e, ts)))
+      Right(List(BetAttemptFailed(e, state.pendingRequest.get.nrOfAttempts, ts)))
   }
 
   override def handleEvent(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = {
@@ -266,7 +261,7 @@ case class CollectingBetsBehaviour(state: FlipState) extends FlipBehaviour {
     case BetError(_, _) =>
       state.gotoBetsAwaiting()
 
-    case BetAttemptFailed(_, _) =>
+    case BetAttemptFailed(_, _, _) =>
       state.incNrOfAttempts()
   }
 }
@@ -281,14 +276,14 @@ case class PayingOutBehaviour(state: FlipState) extends FlipBehaviour {
       Right(List(WinError(e, ts)))
 
     case e: WalletFailure5xx =>
-      Right(List(WinAttemptFailed(e, ts)))
+      Right(List(WinAttemptFailed(e, state.pendingRequest.get.nrOfAttempts, ts)))
   }
 
   override def handleEvent(implicit props: FlipActorProps): PartialFunction[FlipEvent, FlipState] = {
     case WinConfirmed(_, _) =>
       state.gotoRoundFinished
 
-    case WinAttemptFailed(_, _) | WinError(_, _) =>
+    case WinAttemptFailed(_, _, _) | WinError(_, _) =>
       state.incNrOfAttempts()
   }
 }

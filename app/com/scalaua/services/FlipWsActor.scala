@@ -74,14 +74,14 @@ class FlipWsActor(out: ActorRef, managerRef: ActorRef) extends Actor with ActorL
         List(WsFlipped(result, outcome, win), WsStatusUpdated("paying-out"))
       case BetError(WalletError4xx(msg), _) =>
         List(WsShowDisposableMessage(msg))
-      case BetAttemptFailed(_, _) =>
-        List(WsShowBlockingMessage("your balance is temporary unavailable"))
+      case BetAttemptFailed(_, nr, _) =>
+        List(WsShowBlockingMessage(s"We keep trying to process the bet. Attempt #$nr."))
       case WinConfirmed(confirmation, _) =>
         List(WsHideBlockingMessage(), WsBalanceUpdated(confirmation.newBalance), WsStatusUpdated("finished"))
       case WinError(_, _) =>
-        List(WsShowBlockingMessage("please contact support"))
-      case WinAttemptFailed(_, _) =>
-        List(WsShowBlockingMessage("your balance is temporary unavailable"))
+        List(WsShowBlockingMessage("Please contact support."))
+      case WinAttemptFailed(_, nr, _) =>
+        List(WsShowBlockingMessage(s"We keep trying to process the win. Attempt #$nr."))
       case NewRoundStarted(roundId, _) =>
         List(WsNewRoundStarted(roundId), WsStatusUpdated("awaiting"))
       case Attached(_, _) =>

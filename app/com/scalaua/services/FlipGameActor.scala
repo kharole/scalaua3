@@ -10,6 +10,7 @@ import javax.inject.Inject
 import scala.collection.immutable
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
+import scala.math.signum
 
 object FlipGameActor {
 
@@ -53,7 +54,7 @@ class FlipGameActor @Inject()(@Assisted props: FlipActorProps, @Assisted walletR
     case wr: WalletRequest =>
       walletRef ! wr
       log.info(s"request $wr sent to wallet")
-      
+
     case cmd: FlipCommand if state.behaviour.validateCommand(rng, props, Instant.now()).isDefinedAt(cmd) =>
       log.debug(s"processing $cmd command in state: $state")
       state.behaviour.validateCommand(rng, props, Instant.now())(cmd) match {
@@ -111,7 +112,7 @@ class FlipGameActor @Inject()(@Assisted props: FlipActorProps, @Assisted walletR
     implicit val ec: ExecutionContextExecutor = context.dispatcher
     pendingRequest match {
       case Some(p) if p.nrOfAttempts < 10 =>
-        val delay = 10.seconds * p.nrOfAttempts
+        val delay = 10.seconds * signum(p.nrOfAttempts)
         timers.startSingleTimer("wallet-timer", p.walletRequest, delay)
         log.info(s"wallet request ${p.walletRequest} scheduled in $delay")
         ()
